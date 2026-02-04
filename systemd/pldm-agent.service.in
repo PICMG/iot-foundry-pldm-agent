@@ -1,0 +1,28 @@
+[Unit]
+Description=PLDM Agent for IoT-Foundry
+Documentation=man:pldm-agent(1)
+After=network.target
+ConditionVirtualization=!container
+
+[Service]
+Type=simple
+ExecStart=@CMAKE_INSTALL_PREFIX@/bin/pldm-agent --daemon --config=/etc/pldm-agent/config.json
+Restart=on-failure
+RestartSec=5s
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=pldm-agent
+
+# Security settings
+PrivateTmp=yes
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/var/run/mctp /var/log
+
+# Resource limits
+LimitNOFILE=65536
+LimitNPROC=4096
+
+[Install]
+WantedBy=multi-user.target

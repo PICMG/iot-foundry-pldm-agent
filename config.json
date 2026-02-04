@@ -1,0 +1,77 @@
+{
+  "agent": {
+    "name": "pldm-agent-01",
+    "enabled": true,
+    "instanceId": 0,
+    "role": "both"
+  },
+  "transport": {
+    "type": "mctp-socket",
+    "interface": "mctpi2c0",
+    "eid": 8,
+    "mtu": 1024,
+    "socketPath": "/var/run/mctp/socket"
+  },
+  "messaging": {
+    "timeout": 5000,
+    "retries": 3,
+    "retryDelay": 1000,
+    "maxConcurrent": 10,
+    "supportedTypes": [
+      "base",
+      "platform",
+      "bios",
+      "fru"
+    ]
+  },
+  "endpoints": [
+    {
+      "eid": 10,
+      "name": "bmc-primary",
+      "enabled": true,
+      "poll": true,
+      "pollInterval": 60
+    },
+    {
+      "eid": 11,
+      "name": "sensor-hub",
+      "enabled": true,
+      "poll": false
+    }
+  ],
+  "discovery": {
+    "enabled": true,
+    "interval": 300,
+    "eidRange": {
+      "start": 8,
+      "end": 254
+    }
+  },
+  "logging": {
+    "level": "info",
+    "output": "both",
+    "file": "/var/log/pldm-agent.log",
+    "maxSize": 10,
+    "maxFiles": 5,
+    "pldmMessages": false
+  },
+  "security": {
+    "authentication": false,
+    "encryption": false,
+    "allowedEids": []
+  },
+  "performance": {
+    "workerThreads": 4,
+    "bufferSize": 4096,
+    "queueSize": 100
+  },
+  "eventService": {
+    "enabled": false,
+    "endpoint": "http://localhost:8080/events",
+    "topics": [
+      "pldm.sensor",
+      "pldm.event",
+      "pldm.alert"
+    ]
+  }
+}

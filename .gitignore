@@ -1,0 +1,93 @@
+# Build directories
+build/
+dist/
+cmake-build-*/
+out/
+references/
+
+# CMake
+CMakeUserPresets.json
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+*.cmake
+CTestTestfile.cmake
+
+# Compiled objects and libraries
+*.o
+*.a
+*.so
+*.so.*
+*.dylib
+*.lib
+*.dll
+*.exe
+
+# IDE and Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+*.sublime-project
+*.sublime-workspace
+.eclipseproject
+.cproject
+.project
+*.cbp
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.backup
+
+# Logs
+*.log
+pldm-agent.log
+/var/log/
+
+# Runtime files
+*.pid
+*.lock
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+
+# Meson build artifacts (if building libpldm from source)
+subprojects/libpldm/build/
+subprojects/libpldm/meson-private/
+subprojects/libpldm/.meson_build_root
+
+# Local third-party installations
+third_party/
+
+# Package manager artifacts
+*.egg
+*.whl
+dist/
+
+# Test coverage
+*.gcda
+*.gcno
+coverage/
+
+# Doxygen
+docs/generated/
+doxygen_output/
+
+# Tags files
+tags
+TAGS
+.tags
+
+# Misc
+*.orig
+.clang_complete
+compile_commands.json

@@ -1,0 +1,9 @@
+[submodule "subprojects/mctp-serial-linux"]
+	path = subprojects/mctp-serial-linux
+	url = https://github.com/PICMG/mctp-serial-linux
+[submodule "subprojects/libpldm"]
+	path = subprojects/libpldm
+	url = https://github.com/openbmc/libpldm
+[submodule "subprojects/nlohmann-json"]
+	path = subprojects/nlohmann-json
+	url = https://github.com/nlohmann/json

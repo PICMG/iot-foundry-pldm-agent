@@ -1,0 +1,305 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://iot-foundry.io/schemas/pldm-agent-config.json",
+  "title": "PLDM Agent Configuration",
+  "description": "Configuration schema for the IoT-Foundry PLDM Agent",
+  "type": "object",
+  "required": ["agent", "transport", "logging"],
+  "properties": {
+    "agent": {
+      "type": "object",
+      "description": "Core agent configuration",
+      "required": ["name", "enabled"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Name identifier for this agent instance",
+          "minLength": 1
+        },
+        "enabled": {
+          "type": "boolean",
+          "description": "Whether the agent is enabled on startup"
+        },
+        "instanceId": {
+          "type": "integer",
+          "description": "PLDM instance ID (0-31)",
+          "minimum": 0,
+          "maximum": 31,
+          "default": 0
+        },
+        "role": {
+          "type": "string",
+          "enum": ["requester", "responder", "both"],
+          "description": "Agent role in PLDM communication",
+          "default": "both"
+        }
+      }
+    },
+    "transport": {
+      "type": "object",
+      "description": "Transport layer configuration (MCTP)",
+      "required": ["type"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["mctp-i2c", "mctp-smbus", "mctp-pcie", "mctp-serial", "mctp-socket"],
+          "description": "MCTP transport binding type"
+        },
+        "interface": {
+          "type": "string",
+          "description": "Network interface or device path (e.g., 'mctpi2c0', '/dev/i2c-1')"
+        },
+        "eid": {
+          "type": "integer",
+          "description": "Local MCTP Endpoint ID",
+          "minimum": 8,
+          "maximum": 254,
+          "default": 8
+        },
+        "mtu": {
+          "type": "integer",
+          "description": "Maximum transmission unit in bytes",
+          "minimum": 64,
+          "maximum": 4096,
+          "default": 1024
+        },
+        "socketPath": {
+          "type": "string",
+          "description": "Unix socket path for local MCTP communication"
+        }
+      }
+    },
+    "messaging": {
+      "type": "object",
+      "description": "PLDM messaging configuration",
+      "properties": {
+        "timeout": {
+          "type": "integer",
+          "description": "Request timeout in milliseconds",
+          "minimum": 100,
+          "default": 5000
+        },
+        "retries": {
+          "type": "integer",
+          "description": "Number of retry attempts",
+          "minimum": 0,
+          "maximum": 10,
+          "default": 3
+        },
+        "retryDelay": {
+          "type": "integer",
+          "description": "Delay between retries in milliseconds",
+          "minimum": 0,
+          "default": 1000
+        },
+        "maxConcurrent": {
+          "type": "integer",
+          "description": "Maximum concurrent PLDM requests",
+          "minimum": 1,
+          "default": 10
+        },
+        "supportedTypes": {
+          "type": "array",
+          "description": "Supported PLDM message types",
+          "items": {
+            "type": "string",
+            "enum": [
+              "base",
+              "platform",
+              "bios",
+              "fru",
+              "firmware-update",
+              "redfish-device-enablement",
+              "oem"
+            ]
+          },
+          "default": ["base", "platform"]
+        }
+      }
+    },
+    "endpoints": {
+      "type": "array",
+      "description": "Pre-configured PLDM endpoints",
+      "items": {
+        "type": "object",
+        "required": ["eid"],
+        "properties": {
+          "eid": {
+            "type": "integer",
+            "description": "MCTP Endpoint ID",
+            "minimum": 8,
+            "maximum": 254
+          },
+          "name": {
+            "type": "string",
+            "description": "Friendly name for the endpoint"
+          },
+          "enabled": {
+            "type": "boolean",
+            "description": "Whether to communicate with this endpoint",
+            "default": true
+          },
+          "poll": {
+            "type": "boolean",
+            "description": "Enable periodic polling",
+            "default": false
+          },
+          "pollInterval": {
+            "type": "integer",
+            "description": "Polling interval in seconds",
+            "minimum": 1,
+            "default": 60
+          }
+        }
+      }
+    },
+    "discovery": {
+      "type": "object",
+      "description": "Endpoint discovery configuration",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable automatic endpoint discovery",
+          "default": true
+        },
+        "interval": {
+          "type": "integer",
+          "description": "Discovery interval in seconds",
+          "minimum": 10,
+          "default": 300
+        },
+        "eidRange": {
+          "type": "object",
+          "description": "EID range to scan",
+          "properties": {
+            "start": {
+              "type": "integer",
+              "minimum": 8,
+              "maximum": 254,
+              "default": 8
+            },
+            "end": {
+              "type": "integer",
+              "minimum": 8,
+              "maximum": 254,
+              "default": 254
+            }
+          }
+        }
+      }
+    },
+    "logging": {
+      "type": "object",
+      "description": "Logging configuration",
+      "required": ["level"],
+      "properties": {
+        "level": {
+          "type": "string",
+          "enum": ["debug", "info", "warn", "error", "fatal"],
+          "description": "Minimum log level",
+          "default": "info"
+        },
+        "output": {
+          "type": "string",
+          "enum": ["console", "file", "syslog", "both"],
+          "description": "Log output destination",
+          "default": "console"
+        },
+        "file": {
+          "type": "string",
+          "description": "Log file path when output is 'file' or 'both'"
+        },
+        "maxSize": {
+          "type": "integer",
+          "description": "Maximum log file size in MB before rotation",
+          "minimum": 1,
+          "default": 10
+        },
+        "maxFiles": {
+          "type": "integer",
+          "description": "Number of rotated log files to keep",
+          "minimum": 1,
+          "default": 5
+        },
+        "pldmMessages": {
+          "type": "boolean",
+          "description": "Log raw PLDM message payloads (for debugging)",
+          "default": false
+        }
+      }
+    },
+    "security": {
+      "type": "object",
+      "description": "Security configuration",
+      "properties": {
+        "authentication": {
+          "type": "boolean",
+          "description": "Require authentication for PLDM messages",
+          "default": false
+        },
+        "encryption": {
+          "type": "boolean",
+          "description": "Enable message encryption",
+          "default": false
+        },
+        "allowedEids": {
+          "type": "array",
+          "description": "Whitelist of allowed EIDs (empty = allow all)",
+          "items": {
+            "type": "integer",
+            "minimum": 8,
+            "maximum": 254
+          },
+          "default": []
+        }
+      }
+    },
+    "performance": {
+      "type": "object",
+      "description": "Performance tuning parameters",
+      "properties": {
+        "workerThreads": {
+          "type": "integer",
+          "description": "Number of worker threads for message processing",
+          "minimum": 1,
+          "default": 4
+        },
+        "bufferSize": {
+          "type": "integer",
+          "description": "Message buffer size in bytes",
+          "minimum": 256,
+          "default": 4096
+        },
+        "queueSize": {
+          "type": "integer",
+          "description": "Maximum message queue size",
+          "minimum": 10,
+          "default": 100
+        }
+      }
+    },
+    "eventService": {
+      "type": "object",
+      "description": "Event service integration",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable event publishing",
+          "default": false
+        },
+        "endpoint": {
+          "type": "string",
+          "description": "Event service endpoint URL"
+        },
+        "topics": {
+          "type": "array",
+          "description": "Event topics to publish",
+          "items": {
+            "type": "string"
+          },
+          "default": ["pldm.sensor", "pldm.event", "pldm.alert"]
+        }
+      }
+    }
+  }
+}
