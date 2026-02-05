@@ -8,19 +8,19 @@
             "@odata.id": "/redfish/v1/Chassis/Aggregator"
         },
         {
-            "@odata.id": "/redfish/v1/Chassis/Node1"
+            "@odata.id": "/redfish/v1/Chassis/XAxisMover"
         },
         {
-            "@odata.id": "/redfish/v1/Chassis/Node2"
+            "@odata.id": "/redfish/v1/Chassis/YAxisMover"
         },
         {
-            "@odata.id": "/redfish/v1/Chassis/Node3"
+            "@odata.id": "/redfish/v1/Chassis/ZAxisMover"
         },
         {
-            "@odata.id": "/redfish/v1/Chassis/Node4"
+            "@odata.id": "/redfish/v1/Chassis/Sensor1"
         },
         {
-            "@odata.id": "/redfish/v1/Chassis/Node5"
+            "@odata.id": "/redfish/v1/Chassis/Thermostat"
         }
      ],
     "@odata.context": "/redfish/v1/$metadata#ChassisCollection.ChassisCollection",

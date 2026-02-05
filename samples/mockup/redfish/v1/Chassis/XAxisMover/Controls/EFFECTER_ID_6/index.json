@@ -1,0 +1,19 @@
+{
+    "@odata.type": "#Control.v1_6_0.Control",
+    "Id": "EFFECTER_ID_6",
+    "Name": "Acceleration Profile Control",
+    "ControlType": "LinearAcceleration",
+    "SetPointType": "Single",
+    "Status": {
+        "State": "Enabled",
+        "Health": "OK"
+    },
+    "ControlMode": "Manual",
+    "SetPoint": 0.0,
+    "SetPointUnits": "m/s^2",
+    "AllowableMax": 10.0,
+    "AllowableMin": -10.0,
+    "Implementation": "Programmable",
+    "@odata.context": "/redfish/v1/$metadata#Control.Control",
+    "@odata.id": "/redfish/v1/Chassis/XAxisMover/Controls/EFFECTER_ID_6"
+}

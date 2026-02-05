@@ -12,7 +12,7 @@
     ],
     "DownstreamChassis": [
       {
-        "@odata.id": "/redfish/v1/Chassis/Node4"
+        "@odata.id": "/redfish/v1/Chassis/Sensor1"
       }
     ]
   },

@@ -51,9 +51,9 @@
         "ManagerForChassis": [
             {
                 "@odata.id": "/redfish/v1/Chassis/Aggregator",
-                "@odata.id": "/redfish/v1/Chassis/Node3",
-                "@odata.id": "/redfish/v1/Chassis/Node2",
-                "@odata.id": "/redfish/v1/Chassis/Node3"
+                "@odata.id": "/redfish/v1/Chassis/ZAxisMover",
+                "@odata.id": "/redfish/v1/Chassis/YAxisMover",
+                "@odata.id": "/redfish/v1/Chassis/ZAxisMover"
             }
         ],	
         "Oem": {}

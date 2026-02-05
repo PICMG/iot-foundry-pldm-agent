@@ -1,0 +1,14 @@
+{
+    "@odata.type": "#Sensor.v1_8_0.Sensor",
+    "Id": "SENSOR_ID_1",
+    "Name": "Global Interlock Sensor",
+    "ReadingType": "Percent",
+    "Status": {
+        "State": "Enabled",
+        "Health": "OK"
+    },
+    "Reading": 0,
+    "ReadingUnits": "%",
+    "@odata.context": "/redfish/v1/$metadata#Sensor.Sensor",
+    "@odata.id": "/redfish/v1/Chassis/Sensor1/Sensors/SENSOR_ID_1"
+}

@@ -14,12 +14,12 @@
 	},
 	"Links": {
 		"Chassis": {
-			"@odata.id" : "/redfish/v1/Chassis/Node4"
+			"@odata.id" : "/redfish/v1/Chassis/Sensor1"
 		},
 		"GeneralSensors": [
-			{ "@odata.id" : "/redfish/v1/Chassis/Node4/Sensors/Voltage" },
-			{ "@odata.id" : "/redfish/v1/Chassis/Node4/Sensors/Current" },
-			{ "@odata.id" : "/redfish/v1/Chassis/Node4/Sensors/Temperature" }
+			{ "@odata.id" : "/redfish/v1/Chassis/Sensor1/Sensors/Voltage" },
+			{ "@odata.id" : "/redfish/v1/Chassis/Sensor1/Sensors/Current" },
+			{ "@odata.id" : "/redfish/v1/Chassis/Sensor1/Sensors/Temperature" }
 		]
 	},
 	"Instrumentation": {

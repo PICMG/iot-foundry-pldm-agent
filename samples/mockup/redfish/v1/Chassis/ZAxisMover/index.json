@@ -1,0 +1,38 @@
+{
+    "@odata.type": "#Chassis.v1_27_0.Chassis",
+    "AssetTag": "PICMGNODEASSETTAG",
+    "Id": "ZAxisMover",
+    "Name" : "1-Axis Positioner",
+    "ChassisType": "Module",
+    "SerialNumber": "00000001",
+    "Manufacturer": "PICMG",
+    "Model": "PICMG0001",
+    "PartNumber": "Part-01",
+    "Status": {
+        "State": "Enabled",
+        "Health": "OK"
+    },
+    "Controls" : {
+        "@odata.id": "/redfish/v1/Chassis/ZAxisMover/Controls"
+    },
+    "Sensors" : {
+        "@odata.id": "/redfish/v1/Chassis/ZAxisMover/Sensors"
+    },
+    "Links": {
+        "ManagedBy": [
+            {
+                "@odata.id": "/redfish/v1/Managers/AutomationManager"
+            }
+        ],
+        "ContainedBy": {
+            "@odata.id": "/redfish/v1/Chassis/Aggregator"
+        },
+        "AutomationNodes": [
+            {
+                "@odata.id": "/redfish/v1/AutomationNodes/ZAxisMover"
+            }
+        ]
+    },
+    "@odata.context": "/redfish/v1/$metadata#Chassis.Chassis",
+    "@odata.id": "/redfish/v1/Chassis/ZAxisMover"
+}

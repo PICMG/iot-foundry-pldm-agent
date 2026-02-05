@@ -1,6 +1,7 @@
 {
     "@odata.type": "#Role.v1_3_1.Role",
-    "Id": "ReadOnly",
+    "Id": "ReadOnlyUser",
+    "RoleId": "ReadOnlyUser",
     "Name": "User Role",
     "Description": "ReadOnlyUser User Role",
     "IsPredefined": true,

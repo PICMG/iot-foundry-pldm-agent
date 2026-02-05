@@ -22,16 +22,16 @@
 	},
 	"Links": {
 		"Chassis": {
-			"@odata.id" : "/redfish/v1/Chassis/Node5"
+			"@odata.id" : "/redfish/v1/Chassis/Thermostat"
 		},
 		"OutputControl": {
-			"@odata.id" : "/redfish/v1/Chassis/Node5/Controls/Thermostat"
+			"@odata.id" : "/redfish/v1/Chassis/Thermostat/Controls/Thermostat"
 		},
 		"PidErrorSensor": {
-			"@odata.id" : "/redfish/v1/Chassis/Node5/Sensors/Error"
+			"@odata.id" : "/redfish/v1/Chassis/Thermostat/Sensors/Error"
 		},
 		"PidFeedbackSensor": {
-			"@odata.id" : "/redfish/v1/Chassis/Node5/Sensors/Temperature"
+			"@odata.id" : "/redfish/v1/Chassis/Thermostat/Sensors/Temperature"
 		}
 	},
 	"Instrumentation": {

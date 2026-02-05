@@ -1,6 +1,7 @@
 {
     "@odata.type": "#Role.v1_3_1.Role",
     "Id": "Operator",
+    "RoleId": "Operator",
     "Name": "User Role",
     "Description": "Operator User Role",
     "IsPredefined": true,

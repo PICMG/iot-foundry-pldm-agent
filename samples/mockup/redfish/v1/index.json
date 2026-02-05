@@ -1,7 +1,7 @@
 {
     "@odata.context": "/redfish/v1/$metadata#ServiceRoot.ServiceRoot",
     "@odata.id": "/redfish/v1/",
-    "@odata.type": "#ServiceRoot.v1_17_0.ServiceRoot",
+    "@odata.type": "#ServiceRoot.v1_19_0.ServiceRoot",
     "Id": "RootService",
     "Name": "Root Service",
     "RedfishVersion": "1.1.0",

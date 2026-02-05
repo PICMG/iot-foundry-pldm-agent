@@ -1,0 +1,14 @@
+{
+    "@odata.type": "#Sensor.v1_8_0.Sensor",
+    "Id": "SENSOR_ID_4",
+    "Name": "Velocity error",
+    "ReadingType" : "LinearVelocity",
+    "Status": {
+        "State": "Enabled",
+        "Health": "OK"
+    },
+    "Reading" : 0.01,
+    "ReadingUnits" : "m/s",
+    "@odata.context": "/redfish/v1/$metadata#Sensor.Sensor",
+    "@odata.id": "/redfish/v1/Chassis/ZAxisMover/Sensors/SENSOR_ID_4"
+}

@@ -1,0 +1,14 @@
+{
+    "@odata.type": "#Sensor.v1_8_0.Sensor",
+    "Id": "Voltage",
+    "Name": "Voltage",
+    "ReadingType" : "Voltage",
+    "Status": {
+        "State": "Enabled",
+        "Health": "OK"
+    },
+    "Reading" : 12000,
+    "ReadingUnits" : "millivolts",
+    "@odata.context": "/redfish/v1/$metadata#Sensor.Sensor",
+    "@odata.id": "/redfish/v1/Chassis/Sensor1/Sensors/Voltage"
+}

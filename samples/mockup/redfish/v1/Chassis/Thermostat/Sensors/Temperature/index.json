@@ -1,0 +1,14 @@
+{
+    "@odata.type": "#Sensor.v1_8_0.Sensor",
+    "Id": "Temperature",
+    "Name": "Current Position",
+    "ReadingType" : "Temperature",
+    "Status": {
+        "State": "Enabled",
+        "Health": "OK"
+    },
+    "Reading" : 24,
+    "ReadingUnits" : "degrees",
+    "@odata.context": "/redfish/v1/$metadata#Sensor.Sensor",
+    "@odata.id": "/redfish/v1/Chassis/Thermostat/Sensors/Temperature"
+}

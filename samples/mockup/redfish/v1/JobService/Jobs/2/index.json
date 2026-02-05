@@ -7,11 +7,10 @@
     "Description" : "This Job resource was created by posting to the Jobs collection",
     "Actions": {
     },
-    "JobType": "Posted",
+    "JobType": "UserSpecified",
     "CreationTime" : "2022-01-16T06:14:33+06:00",
     "JobState": "Running",
     "PercentComplete" : 99, 
-    "LastUpdateTime" : "2022-01-16T06:15:31+06:00", 
     "StartTime" : "2022-01-16T06:14:33+06:00",
     "JobStatus": "OK",
     "Links" : {

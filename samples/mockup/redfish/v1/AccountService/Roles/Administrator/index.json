@@ -1,6 +1,7 @@
 {
     "@odata.type": "#Role.v1_3_1.Role",
     "Id": "Administrator",
+    "RoleId": "Administrator",
     "Name": "User Role",
     "Description": "Admin User Role",
     "IsPredefined": true,

@@ -1,0 +1,23 @@
+{
+    "@odata.type": "#Control.v1_6_0.Control",
+    "Id": "EFFECTER_ID_4",
+    "Name": "Final position",
+    "ControlType" : "LinearPosition",
+    "SetPointType" : "Single",
+    "Status": {
+        "State": "Enabled",
+        "Health": "OK"
+    },
+    "ControlMode" : "Manual",
+    "SetPoint" : 0.0503,
+    "SetPointUnits" : "m",
+    "AllowableMax" : 0.0600,
+    "AllowableMin" : 0,
+    "Implementation" : "Programmable",
+    "Sensor" : {
+        "Reading" : 0.0504,
+        "DataSourceURI" : "/redfish/v1/Chassis/XAxisMover/Sensors/SENSOR_ID_7"
+    },
+    "@odata.context": "/redfish/v1/$metadata#Control.Control",
+    "@odata.id": "/redfish/v1/Chassis/XAxisMover/Controls/EFFECTER_ID_4"
+}

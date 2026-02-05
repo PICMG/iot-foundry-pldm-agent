@@ -32,12 +32,8 @@
     },
     "JobType": "DocumentBased",
     "CreationTime" : "2022-01-16T04:14:33+06:00",
-    "ExecutionPolicies" : {
-        "Priority": "High"
-    },
-    "JobState": "Queued",
+    "JobState": "Pending",
     "PercentComplete" : 25,
-    "LastUpdateTime" : "2022-01-16T04:15:31+06:00",
     "EstimatedCompletionTime"  : "2022-01-16T04:18:31+06:00",  
     "Parameters" : {
         "AmountPieces":10000,
@@ -46,10 +42,6 @@
     },
     "StartTime" : "2022-01-16T04:14:33+06:00",
     "JobStatus": "OK",
-    "RemoteCreatorUri" : "https://192.168.0.1/redfish/v1/JobService/Jobs/1",
-    "RemoteSubsidiaryJobUris" : [
-        "https://192.168.0.3/redfish/v1/JobService/Jobs/1"
-    ],
     "Links" : {
         "JobDocument" : { "@odata.id" : "/redfish/v1/JobService/Documents/Recipe1" },
         "Executor" : { "@odata.id" : "/redfish/v1/JobService/Executors/1" },

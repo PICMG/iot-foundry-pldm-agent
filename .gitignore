@@ -4,6 +4,8 @@ dist/
 cmake-build-*/
 out/
 references/
+SchemaFiles/
+logs/
 
 # CMake
 CMakeUserPresets.json
@@ -59,6 +61,7 @@ __pycache__/
 *.py[cod]
 *$py.class
 *.egg-info/
+.venv*/
 
 # Meson build artifacts (if building libpldm from source)
 subprojects/libpldm/build/

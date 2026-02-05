@@ -1,0 +1,25 @@
+{
+    "@odata.type": "#Control.v1_6_0.Control",
+    "Id": "EFFECTER_ID_1",
+    "Name": "Global Interlock Control",
+    "ControlType": "Valve",
+    "SetPointType": "Single",
+    "Status": {
+        "State": "Enabled",
+        "Health": "OK"
+    },
+    "ControlMode": "Enabled",
+    "SetPoint": 0,
+    "SetPointUnits": "%",
+    "AllowableMax": 1,
+    "AllowableMin": 0,
+    "SettingMax": 1,
+    "SettingMin": 0,
+    "Implementation": "Programmable",
+    "Sensor": {
+        "Reading": 0,
+        "DataSourceUri": "/redfish/v1/Chassis/YAxisMover/Sensors/SENSOR_ID_1"
+    },
+    "@odata.context": "/redfish/v1/$metadata#Control.Control",
+    "@odata.id": "/redfish/v1/Chassis/YAxisMover/Controls/EFFECTER_ID_1"
+}

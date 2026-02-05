@@ -11,13 +11,13 @@
         ],
         "Contains": [
             {
-                "@odata.id": "/redfish/v1/Chassis/Node1"
+                "@odata.id": "/redfish/v1/Chassis/XAxisMover"
             },
             {
-                "@odata.id": "/redfish/v1/Chassis/Node2"
+                "@odata.id": "/redfish/v1/Chassis/YAxisMover"
             },
             {
-                "@odata.id": "/redfish/v1/Chassis/Node3"
+                "@odata.id": "/redfish/v1/Chassis/ZAxisMover"
             }
         ]
     },

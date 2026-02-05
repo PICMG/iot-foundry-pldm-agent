@@ -1,0 +1,23 @@
+{
+    "@odata.type": "#Control.v1_6_0.Control",
+    "Id": "EFFECTER_ID_5",
+    "Name": "Velocity Profile Control",
+    "ControlType": "LinearVelocity",
+    "SetPointType": "Single",
+    "Status": {
+        "State": "Enabled",
+        "Health": "OK"
+    },
+    "ControlMode": "Manual",
+    "SetPoint": 0.0,
+    "SetPointUnits": "m/s",
+    "AllowableMax": 1.0,
+    "AllowableMin": -1.0,
+    "Implementation": "Programmable",
+    "Sensor": {
+        "Reading": 0.0,
+        "DataSourceUri": "/redfish/v1/Chassis/YAxisMover/Sensors/SENSOR_ID_6"
+    },
+    "@odata.context": "/redfish/v1/$metadata#Control.Control",
+    "@odata.id": "/redfish/v1/Chassis/YAxisMover/Controls/EFFECTER_ID_5"
+}
