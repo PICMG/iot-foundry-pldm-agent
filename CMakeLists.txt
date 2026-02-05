@@ -24,6 +24,8 @@ find_package(PkgConfig REQUIRED)
 
 # Include subprojects
 # Build mctp-serial-linux with CMake
+# Enable BUILD_TESTS to prevent hidden visibility on LinuxMctpSerial symbols
+set(BUILD_TESTS ON CACHE BOOL "Build tests for libsermctp" FORCE)
 add_subdirectory(subprojects/mctp-serial-linux EXCLUDE_FROM_ALL)
 
 # Add nlohmann/json (header-only library)
