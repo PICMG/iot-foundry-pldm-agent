@@ -1,0 +1,50 @@
+{
+    "@odata.id": "/redfish/v1/JobService",
+    "@odata.type": "#JobService.v1_2_0.JobService",
+    "Actions": {
+        "@odata.type": "#JobService.v1_2_0.Actions",
+        "#JobService.CancelAllJobs": {
+            "target": "/redfish/v1/JobService/Actions/JobService.CancelAllJobs"
+        },
+        "#JobService.InvalidateAllJobs": {
+            "target": "/redfish/v1/JobService/Actions/JobService.InvalidateAllJobs"
+        },
+        "#JobService.ResumeAllJobs": {
+            "target": "/redfish/v1/JobService/Actions/JobService.ResumeAllJobs"
+        },
+        "#JobService.SuspendAllJobs": {
+            "target": "/redfish/v1/JobService/Actions/JobService.SuspendAllJobs"
+        }  
+    },
+    "DateTime": "2022-01-1T02:00:00+06:00",
+    "Id": "JobService",
+    "JobDocuments": {
+        "@odata.id": "/redfish/v1/JobService/Documents"
+    },
+    "JobExecutors": {
+        "@odata.id": "/redfish/v1/JobService/Executors"
+    },
+	"ServicePolicies" : {
+        "AutoValidation" : true,
+        "BypassValidation" : true
+    },
+    "Jobs": {
+        "@odata.id": "/redfish/v1/JobService/Jobs"
+    },
+    "Log": {
+        "@odata.id": "/redfish/v1/JobService/Log" 
+    },
+    "Name": "Job Service",
+    "ServiceCapabilities": {
+        "MaxJobs": 60,
+        "MaxSteps": 5,
+        "Scheduling": true,
+        "SupportsPostedJobs": true,
+        "SupportsDocumentBasedJobs": true
+    },
+    "ServiceEnabled": true,
+    "Status": {
+        "State": "Enabled",
+        "Health": "OK"
+    }
+}

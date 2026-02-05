@@ -1,0 +1,28 @@
+{
+    "@odata.type": "#CableCollection.CableCollection",
+    "Description": "A collection of Cables that connect elements of the Automation installation",
+    "Name": "Cable Collection",
+    "Members@odata.count": 6,
+    "Members": [
+        {
+            "@odata.id": "/redfish/v1/Cables/MainPower"
+        },
+        {
+            "@odata.id": "/redfish/v1/Cables/ComPower1"
+        },
+        {
+            "@odata.id": "/redfish/v1/Cables/ComPower2"
+        },
+        {
+            "@odata.id": "/redfish/v1/Cables/ComPower3"
+        },
+        {
+            "@odata.id": "/redfish/v1/Cables/ComPower4"
+        },
+        {
+            "@odata.id": "/redfish/v1/Cables/ComPower5"
+        }
+     ],
+    "@odata.context": "/redfish/v1/$metadata#CableCollection.CableCollection",
+    "@odata.id": "/redfish/v1/Cables"
+}

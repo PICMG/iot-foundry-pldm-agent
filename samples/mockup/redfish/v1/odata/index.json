@@ -1,0 +1,55 @@
+{
+    "value": [
+        {
+            "name": "ServiceRoot",
+            "kind": "Singleton",
+            "url": "/redfish/v1/"
+        },
+        {
+            "name": "AccountService",
+            "kind": "Singleton",
+            "url": "/redfish/v1/AccountService"
+        },
+        {
+            "name": "Cables",
+            "kind": "Singleton",
+            "url": "/redfish/v1/Cables"
+        },
+        {
+            "name": "Chassis",
+            "kind": "Singleton",
+            "@odata.id": "/redfish/v1/Chassis"
+        },
+        {
+            "name": "EventService",
+            "kind": "Singleton",
+            "url": "/redfish/v1/EventService"
+        },
+        {
+            "name": "JobService",
+            "kind": "Singleton",
+            "url": "/redfish/v1/JobService"
+        },
+        {
+            "name": "AutomationNodes",
+            "kind": "Singleton",
+            "url": "/redfish/v1/AutomationNodes"
+        },
+        {
+            "name": "Managers",
+            "kind": "Singleton",
+            "url": "/redfish/v1/Managers"
+        },
+        {
+            "name": "SessionService",
+            "kind": "Singleton",
+            "url": "/redfish/v1/SessionService"
+        },
+        {
+            "name": "Sessions",
+            "kind": "Singleton",
+            "url": "/redfish/v1/SessionService/Sessions"
+        }
+    ],
+    "@odata.context": "/redfish/v1/$metadata"
+}

@@ -1,0 +1,28 @@
+{
+    "@odata.type": "#LogService.v1_5_1.LogService",
+    "Id": "Log",
+    "Name": "System Log Service",
+    "MaxNumberOfRecords": 1000,
+    "OverWritePolicy": "WrapsWhenFull",
+    "DateTime": "2015-03-13T04:14:33+06:00",
+    "DateTimeLocalOffset": "+06:00",
+    "ServiceEnabled": true,
+    "Status": {
+        "@odata.type": "#Resource.Status",
+        "State": "Enabled",
+        "Health": "OK"
+    },
+    "Oem": {},
+    "Actions": {
+        "@odata.type": "#LogService.v1_5_1.Actions",
+        "#LogService.ClearLog": {
+            "target": "/redfish/v1/Managers/AutomationManager/LogServices/Log/Actions/LogService.Reset"
+        },
+        "Oem": {}
+    },
+    "Entries": {
+        "@odata.id": "/redfish/v1/Managers/AutomationManager/LogServices/Log/Entries"
+    },
+    "@odata.context": "/redfish/v1/$metadata#LogService.LogService",
+    "@odata.id": "/redfish/v1/Managers/AutomationManager/LogServices/Log"
+}

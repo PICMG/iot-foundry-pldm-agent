@@ -1,0 +1,45 @@
+{
+    "@odata.type": "#AutomationNode.v1_0_0.AutomationNode",
+    "@odata.context": "/redfish/v1/$metadata#AutomationNode.AutomationNode",
+    "@odata.id": "/redfish/v1/AutomationNodes/Thermostat",
+    "Id": "Thermostat",
+    "Name": "PID Thermostat Controller",
+	"Description": "An example PID AutomationNode resource",
+	"Actions": {
+		"@odata.type": "#AutomationNode.v1_0_0.Actions",
+		"#AutomationNode.Reset": {
+			"target": "/redfish/v1/AutomationNodes/Thermostat/Actions/AutomationNode.Reset"
+		},
+		"#AutomationNode.SendTrigger": {
+			"target": "/redfish/v1/AutomationNodes/Thermostat/Actions/AutomationNode.SendTrigger"
+		},
+		"#AutomationNode.Start": {
+			"target": "/redfish/v1/AutomationNodes/Thermostat/Actions/AutomationNode.Start"
+		},
+		"#AutomationNode.Stop": {
+			"target": "/redfish/v1/AutomationNodes/Thermostat/Actions/AutomationNode.Stop"
+		}
+	},
+	"Links": {
+		"Chassis": {
+			"@odata.id" : "/redfish/v1/Chassis/Node5"
+		},
+		"OutputControl": {
+			"@odata.id" : "/redfish/v1/Chassis/Node5/Controls/Thermostat"
+		},
+		"PidErrorSensor": {
+			"@odata.id" : "/redfish/v1/Chassis/Node5/Sensors/Error"
+		},
+		"PidFeedbackSensor": {
+			"@odata.id" : "/redfish/v1/Chassis/Node5/Sensors/Temperature"
+		}
+	},
+	"Instrumentation": {
+        "@odata.id": "/redfish/v1/AutomationNodes/Thermostat/AutomationInstrumentation"
+    },
+	"NodeType": "Pid",
+	"Status": {
+        "State": "Enabled",
+        "Health": "OK"
+	}
+}

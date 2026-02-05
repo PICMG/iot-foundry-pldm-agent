@@ -1,0 +1,16 @@
+{
+    "@odata.type": "#SensorCollection.SensorCollection",
+    "Description": "A collection of sensors",
+    "Name": "Sensor Collection",
+    "Members@odata.count": 2,
+    "Members": [
+        {
+            "@odata.id": "/redfish/v1/Chassis/Node5/Sensors/Error"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/Node5/Sensors/Temperature"
+        }
+     ],
+    "@odata.context": "/redfish/v1/$metadata#SensorCollection.SensorCollection",
+    "@odata.id": "/redfish/v1/Chassis/Node5/Sensors"
+}

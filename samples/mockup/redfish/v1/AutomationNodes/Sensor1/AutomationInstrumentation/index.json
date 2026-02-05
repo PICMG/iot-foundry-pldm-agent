@@ -1,0 +1,14 @@
+{
+    "@odata.type": "#AutomationInstrumentation.v1_0_0.AutomationInstrumentation",
+    "@odata.context": "/redfish/v1/$metadata#AutomationInstrumentation.AutomationInstrumentation",
+    "@odata.id": "/redfish/v1/AutomationNodes/Sensor1/AutomationInstrumentation",
+    "Id": "Instrumentation",
+    "Name": "Instrumentation for Simple Sensor AutomationNode",
+
+    "AssertInterlock": false,
+    "GeneralSensorReadings": [
+        0.0, 0.0, 0.0
+    ],
+    "InterlockValue": false,
+    "TriggerValue": false
+}

@@ -1,0 +1,22 @@
+{
+    "@odata.type": "#SensorCollection.SensorCollection",
+    "Description": "A collection of sensors",
+    "Name": "Sensor Collection",
+    "Members@odata.count": 4,
+    "Members": [
+        {
+            "@odata.id": "/redfish/v1/Chassis/Node2/Sensors/Verror"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/Node2/Sensors/Perror"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/Node2/Sensors/Velocity"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/Node2/Sensors/Position"
+        }
+     ],
+    "@odata.context": "/redfish/v1/$metadata#SensorCollection.SensorCollection",
+    "@odata.id": "/redfish/v1/Chassis/Node2/Sensors"
+}

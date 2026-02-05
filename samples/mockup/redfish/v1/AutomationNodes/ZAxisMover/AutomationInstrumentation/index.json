@@ -1,0 +1,26 @@
+{
+    "@odata.type": "#AutomationInstrumentation.v1_0_0.AutomationInstrumentation",
+    "@odata.context": "/redfish/v1/$metadata#AutomationInstrumentation.AutomationInstrumentation",
+    "@odata.id": "/redfish/v1/AutomationNodes/ZAxisMover/AutomationInstrumentation",
+    "Id": "Instrumentation",
+    "Name": "Instrumentation for Z-Axis Motion Controller",
+
+    "AccelerationGain": 0.0,
+    "AccelerationGainReading": 0.0,
+    "AccelerationTarget": 0.0,
+    "AccelerationTargetReading": 0.0,
+    "AssertInterlock": false,
+    "ControllerState": "Idle",
+    "InterlockValue": false,
+    "NegativeLimitReading": false,
+    "PositionErrorReading" : 0.0,
+    "PositionReading" : 0.0,
+    "PositionTarget": 0.0,
+    "PositionTargetReading": 0.0,
+    "PositiveLimitReading": false,
+    "TriggerValue": false,
+    "VelocityErrorReading" : 0.0,
+    "VelocityReading" : 0.0,
+    "VelocityTarget": 0.0,
+    "VelocityTargetReading": 0.0
+}

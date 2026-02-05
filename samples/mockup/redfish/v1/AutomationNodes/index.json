@@ -1,0 +1,25 @@
+{
+    "@odata.type": "#AutomationNodeCollection.AutomationNodeCollection",
+    "Description": "A collection of Automation Nodes",
+    "Name": "Automation Node Collection",
+    "Members@odata.count": 5,
+    "Members": [
+        {
+            "@odata.id": "/redfish/v1/AutomationNodes/Sensor1"
+        },
+        {
+            "@odata.id": "/redfish/v1/AutomationNodes/Thermostat"
+        },
+        {
+            "@odata.id": "/redfish/v1/AutomationNodes/XAxisMover"
+        },
+        {
+            "@odata.id": "/redfish/v1/AutomationNodes/YAxisMover"
+        },
+        {
+            "@odata.id": "/redfish/v1/AutomationNodes/ZAxisMover"
+        }
+     ],
+    "@odata.context": "/redfish/v1/$metadata#AutomationNodesCollection.AutomationNodeCollection",
+    "@odata.id": "/redfish/v1/AutomationNodes"
+}

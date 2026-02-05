@@ -1,0 +1,22 @@
+{
+    "@odata.type": "#AutomationInstrumentation.v1_0_0.AutomationInstrumentation",
+    "@odata.context": "/redfish/v1/$metadata#AutomationInstrumentation.AutomationInstrumentation",
+    "@odata.id": "/redfish/v1/AutomationNodes/Thermostat/AutomationInstrumentation",
+    "Id": "Instrumentation",
+    "Name": "Instrumentation for PID Thermostat Controller",
+
+    "AssertInterlock": false,
+    "ControllerState": "Idle",
+    "Differential": 0.0,
+    "DifferentialReading": 0.0,
+    "Integral": 0.0,
+    "IntegralReading": 0.0,
+    "InterlockValue": false,
+    "PidErrorReading" : 0.0,
+    "PidFeedbackReading" : 0.0,
+    "PidSetpoint": 0.0,
+    "PidSetpointReading": 0.0,
+    "Proportional": 0.0,
+    "ProportionalReading": 0.0,
+    "TriggerValue": false
+}

@@ -1,0 +1,13 @@
+{
+    "@odata.type": "#ControlCollection.ControlCollection",
+    "Description": "A collection of controls",
+    "Name": "Control Collection",
+    "Members@odata.count": 4,
+    "Members": [
+        {
+            "@odata.id": "/redfish/v1/Chassis/Node2/Controls/Output"
+        }
+     ],
+    "@odata.context": "/redfish/v1/$metadata#ControlCollection.ControlCollection",
+    "@odata.id": "/redfish/v1/Chassis/Node2/Controls"
+}

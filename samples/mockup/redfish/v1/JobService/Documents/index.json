@@ -1,0 +1,12 @@
+{
+    "@odata.type": "#JobDocumentCollection.JobDocumentCollection",
+    "Name": "Automation Job Document Collection",
+    "Members@odata.count": 1,
+    "Members": [
+        {
+            "@odata.id": "/redfish/v1/JobService/Documents/Recipe1"
+        }
+    ],
+    "@odata.context": "/redfish/v1/$metadata#JobDocumentCollection.JobDocumentCollection",
+    "@odata.id": "/redfish/v1/JobService/Documents"
+}

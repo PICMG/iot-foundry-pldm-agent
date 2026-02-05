@@ -1,0 +1,54 @@
+{
+    "@odata.type": "#AutomationNode.v1_0_0.AutomationNode",
+	"@odata.context": "/redfish/v1/$metadata#AutomationNode.AutomationNode",
+	"@odata.id": "/redfish/v1/AutomationNodes/ZAxisMover",
+    "Id": "ZAxisMover",
+    "Name": "Z-Axis positioner",
+	"Description": "The z axis automation node for the machine",
+	"Actions": {
+		"@odata.type": "#AutomationNode.v1_0_0.Actions",
+		"#AutomationNode.Reset": {
+			"target": "/redfish/v1/AutomationNodes/ZAxisMover/Actions/AutomationNode.Reset"
+		},
+		"#AutomationNode.SendTrigger": {
+			"target": "/redfish/v1/AutomationNodes/ZAxisMover/Actions/AutomationNode.SendTrigger"
+		},
+		"#AutomationNode.Start": {
+			"target": "/redfish/v1/AutomationNodes/ZAxisMover/Actions/AutomationNode.Start"
+		},
+		"#AutomationNode.Stop": {
+			"target": "/redfish/v1/AutomationNodes/ZAxisMover/Actions/AutomationNode.Stop"
+		},
+		"#AutomationNode.Wait": {
+			"target": "/redfish/v1/AutomationNodes/ZAxisMover/Actions/AutomationNode.Wait"
+		}
+	},
+    "Instrumentation" : {
+        "@odata.id" : "/redfish/v1/AutomationNodes/ZAxisMover/AutomationInstrumentation"
+    },
+	"Links": {
+		"Chassis": {
+			"@odata.id" : "/redfish/v1/Chassis/Node3"
+		},
+		"OutputControl": {
+			"@odata.id" : "/redfish/v1/Chassis/Node3/Controls/Output"
+		},
+		"PositionSensor": {
+			"@odata.id" : "/redfish/v1/Chassis/Node3/Sensors/Position"
+		},
+		"PositionErrorSensor": {
+			"@odata.id" : "/redfish/v1/Chassis/Node3/Sensors/Perror"
+		},
+		"VelocitySensor": {
+			"@odata.id" : "/redfish/v1/Chassis/Node3/Sensors/Velocity"
+		},
+		"VelocityErrorSensor": {
+			"@odata.id" : "/redfish/v1/Chassis/Node3/Sensors/Verror"
+		}
+	},
+	"NodeType": "ProfiledMotion",
+	"Status": {
+        "State": "Enabled",
+        "Health": "OK"
+	}
+}

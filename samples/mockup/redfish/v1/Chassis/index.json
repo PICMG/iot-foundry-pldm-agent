@@ -1,0 +1,28 @@
+{
+    "@odata.type": "#ChassisCollection.ChassisCollection",
+    "Description": "A collection of chassis, including Automation Aggregator and Nodes",
+    "Name": "Chassis Collection",
+    "Members@odata.count": 6,
+    "Members": [
+        {
+            "@odata.id": "/redfish/v1/Chassis/Aggregator"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/Node1"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/Node2"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/Node3"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/Node4"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/Node5"
+        }
+     ],
+    "@odata.context": "/redfish/v1/$metadata#ChassisCollection.ChassisCollection",
+    "@odata.id": "/redfish/v1/Chassis"
+}

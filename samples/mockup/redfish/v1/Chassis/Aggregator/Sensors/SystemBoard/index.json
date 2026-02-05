@@ -1,0 +1,32 @@
+{
+    "@odata.type": "#Sensor.v1_8_0.Sensor",
+    "Id": "SystemBoard",
+    "Name": "System Board Temperature",
+    "ReadingType" : "Temperature",
+    "Status": {
+        "State": "Enabled",
+        "Health": "OK"
+    },
+    "Reading" : 42,
+    "ReadingUnits" : "degrees C",
+    "PhysicalContext" : "SystemBoard",
+    "PhysicalSubContext" : "Input",
+    "MaxAllowableOperatingValue" : 100,
+    "MinAllowableOperatingValue" : 0,
+    "Thresholds" : {
+        "UpperCaution" : {
+            "Reading" : 55,
+            "Activation" : "Increasing"
+        },
+        "UpperCritical" :  {
+            "Reading" : 65,
+            "Activation" : "Increasing"
+        },
+        "UpperFatal" :  {
+            "Reading" : 75,
+            "Activation" : "Increasing"
+        }
+    },
+    "@odata.context": "/redfish/v1/$metadata#Sensor.Sensor",
+    "@odata.id": "/redfish/v1/Chassis/Aggregator/Sensors/SystemBoard"
+}

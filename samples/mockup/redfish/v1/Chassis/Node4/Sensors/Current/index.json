@@ -1,0 +1,14 @@
+{
+    "@odata.type": "#Sensor.v1_8_0.Sensor",
+    "Id": "Current",
+    "Name": "Current",
+    "ReadingType" : "Current",
+    "Status": {
+        "State": "Enabled",
+        "Health": "OK"
+    },
+    "Reading" : 100,
+    "ReadingUnits" : "milliamps",
+    "@odata.context": "/redfish/v1/$metadata#Sensor.Sensor",
+    "@odata.id": "/redfish/v1/Chassis/Node4/Sensors/Current"
+}
