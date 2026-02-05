@@ -1,7 +1,6 @@
 #pragma once
 
-#include <libpldm/platform.h>
-#include <sermctp/LinuxMctpSerial.hpp>
+#include <sermctp/detail/LinuxMctpSerial_impl.hpp>
 #include <memory>
 #include <map>
 #include <mutex>
@@ -31,7 +30,7 @@ private:
         uint8_t target_eid;
     };
     
-    std::unique_ptr<iotorch::sermctp::LinuxMctpSerial> mctp;
+    std::unique_ptr<LinuxMctpSerial> mctp;
     
     // Thread safety for pending requests map
     mutable std::mutex pending_lock;

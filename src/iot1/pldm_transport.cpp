@@ -14,7 +14,7 @@ bool PldmTransport::initialize(const std::string& mctp_interface,
                                uint8_t local_id,
                                const std::vector<uint8_t>& peer_eids) {
     try {
-        mctp = std::make_unique<iotorch::sermctp::LinuxMctpSerial>();
+        mctp = std::make_unique<LinuxMctpSerial>();
         std::string result = mctp->initialize(mctp_interface, local_id, peer_eids);
         
         if (!result.empty()) {
