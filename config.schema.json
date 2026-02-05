@@ -4,7 +4,7 @@
   "title": "PLDM Agent Configuration",
   "description": "Configuration schema for the IoT-Foundry PLDM Agent",
   "type": "object",
-  "required": ["agent", "transport", "logging"],
+  "required": ["agent", "downstream_transport", "logging"],
   "properties": {
     "agent": {
       "type": "object",
@@ -35,37 +35,89 @@
         }
       }
     },
-    "transport": {
+    "downstream_transport": {
       "type": "object",
-      "description": "Transport layer configuration (MCTP)",
-      "required": ["type"],
+      "description": "Downstream PLDM transport via MCTP serial (PTY or physical serial device)",
+      "required": ["mctp_interface", "local_eid", "peer_eids"],
       "properties": {
-        "type": {
+        "mctp_interface": {
           "type": "string",
-          "enum": ["mctp-i2c", "mctp-smbus", "mctp-pcie", "mctp-serial", "mctp-socket"],
-          "description": "MCTP transport binding type"
+          "description": "MCTP serial interface name assigned by Linux (e.g., 'mctpserial0')",
+          "minLength": 1
         },
-        "interface": {
-          "type": "string",
-          "description": "Network interface or device path (e.g., 'mctpi2c0', '/dev/i2c-1')"
-        },
-        "eid": {
+        "local_eid": {
           "type": "integer",
-          "description": "Local MCTP Endpoint ID",
+          "description": "Local MCTP Endpoint ID for this agent",
           "minimum": 8,
-          "maximum": 254,
-          "default": 8
+          "maximum": 255
         },
-        "mtu": {
+        "peer_eids": {
+          "type": "array",
+          "description": "List of remote endpoint IDs to communicate with",
+          "items": {
+            "type": "integer",
+            "minimum": 8,
+            "maximum": 255
+          },
+          "minItems": 1
+        },
+        "serial_device": {
+          "type": ["string", "null"],
+          "description": "Physical serial device path (e.g., '/dev/ttyUSB0'). If null, uses PTY (pseudo-terminal)",
+          "default": null
+        },
+        "baud_rate": {
+          "type": ["integer", "null"],
+          "description": "Serial baud rate (only used if serial_device is specified)",
+          "enum": [null, 9600, 19200, 38400, 57600, 115200, 230400, 460800, 921600],
+          "default": null
+        },
+        "enable_diagnostics": {
+          "type": "boolean",
+          "description": "Enable libsermctp diagnostic output for debugging MCTP communication",
+          "default": false
+        },
+        "timeout_ms": {
           "type": "integer",
-          "description": "Maximum transmission unit in bytes",
-          "minimum": 64,
-          "maximum": 4096,
-          "default": 1024
+          "description": "Request timeout in milliseconds",
+          "minimum": 100,
+          "default": 5000
         },
-        "socketPath": {
-          "type": "string",
-          "description": "Unix socket path for local MCTP communication"
+        "retries": {
+          "type": "integer",
+          "description": "Number of retry attempts on request failure",
+          "minimum": 0,
+          "maximum": 10,
+          "default": 3
+        },
+        "retry_delay_ms": {
+          "type": "integer",
+          "description": "Delay between retry attempts in milliseconds",
+          "minimum": 0,
+          "default": 1000
+        },
+        "max_concurrent": {
+          "type": "integer",
+          "description": "Maximum concurrent PLDM requests",
+          "minimum": 1,
+          "default": 10
+        },
+        "supported_types": {
+          "type": "array",
+          "description": "Supported PLDM message types",
+          "items": {
+            "type": "string",
+            "enum": [
+              "base",
+              "platform",
+              "bios",
+              "fru",
+              "firmware-update",
+              "redfish-device-enablement",
+              "oem"
+            ]
+          },
+          "default": ["base", "platform"]
         }
       }
     },
@@ -119,16 +171,16 @@
     },
     "endpoints": {
       "type": "array",
-      "description": "Pre-configured PLDM endpoints",
+      "description": "PLDM endpoints to communicate with",
       "items": {
         "type": "object",
-        "required": ["eid"],
+        "required": ["eid", "enabled", "initialize"],
         "properties": {
           "eid": {
             "type": "integer",
             "description": "MCTP Endpoint ID",
             "minimum": 8,
-            "maximum": 254
+            "maximum": 255
           },
           "name": {
             "type": "string",
@@ -139,18 +191,58 @@
             "description": "Whether to communicate with this endpoint",
             "default": true
           },
+          "initialize": {
+            "type": "boolean",
+            "description": "Whether the agent should initialize this endpoint (true) or if it's pre-initialized by the system (false)"
+          },
+          "hw_address": {
+            "type": "string",
+            "description": "USB hardware address for consistent binding to physical USB port (e.g., '1-1.2:1.0'). Mutually exclusive with serial_device. Recommended for USB-serial devices."
+          },
+          "serial_device": {
+            "type": "string",
+            "description": "Direct serial device path (e.g., '/dev/ttyUSB0', '/dev/ttyS1'). Mutually exclusive with hw_address. Use for non-USB serial ports."
+          },
+          "baud_rate": {
+            "type": "integer",
+            "description": "Serial baud rate (required if initialize=true)",
+            "enum": [9600, 19200, 38400, 57600, 115200, 230400, 460800, 921600]
+          },
+          "flow_control": {
+            "type": "string",
+            "description": "Hardware flow control setting (required if initialize=true)",
+            "enum": ["none", "hardware", "software"]
+          },
+          "connector_id": {
+            "type": "string",
+            "description": "Physical connector identifier/label (e.g., 'J12', 'CON3') for physical hardware documentation (required if initialize=true)"
+          },
           "poll": {
             "type": "boolean",
             "description": "Enable periodic polling",
             "default": false
           },
-          "pollInterval": {
+          "poll_interval": {
             "type": "integer",
             "description": "Polling interval in seconds",
             "minimum": 1,
             "default": 60
           }
-        }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": { "initialize": { "const": true } }
+            },
+            "then": {
+              "required": ["baud_rate", "flow_control", "connector_id"],
+              "oneOf": [
+                { "required": ["hw_address"] },
+                { "required": ["serial_device"] }
+              ]
+            }
+          }
+        ]
       }
     },
     "discovery": {

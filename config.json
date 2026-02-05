@@ -5,19 +5,18 @@
     "instanceId": 0,
     "role": "both"
   },
-  "transport": {
-    "type": "mctp-socket",
-    "interface": "mctpi2c0",
-    "eid": 8,
-    "mtu": 1024,
-    "socketPath": "/var/run/mctp/socket"
-  },
-  "messaging": {
-    "timeout": 5000,
+  "downstream_transport": {
+    "mctp_interface": "mctpserial0",
+    "local_eid": 8,
+    "peer_eids": [9, 10, 11],
+    "serial_device": null,
+    "baud_rate": null,
+    "enable_diagnostics": false,
+    "timeout_ms": 5000,
     "retries": 3,
-    "retryDelay": 1000,
-    "maxConcurrent": 10,
-    "supportedTypes": [
+    "retry_delay_ms": 1000,
+    "max_concurrent": 10,
+    "supported_types": [
       "base",
       "platform",
       "bios",
@@ -26,16 +25,33 @@
   },
   "endpoints": [
     {
-      "eid": 10,
-      "name": "bmc-primary",
+      "eid": 9,
+      "name": "sensor-hub",
       "enabled": true,
+      "initialize": true,
+      "hw_address": "1-1.2:1.0",
+      "baud_rate": 115200,
+      "flow_control": "hardware",
+      "connector_id": "J12",
       "poll": true,
-      "pollInterval": 60
+      "poll_interval": 60
+    },
+    {
+      "eid": 10,
+      "name": "legacy-controller",
+      "enabled": true,
+      "initialize": true,
+      "serial_device": "/dev/ttyS1",
+      "baud_rate": 9600,
+      "flow_control": "none",
+      "connector_id": "J8",
+      "poll": false
     },
     {
       "eid": 11,
-      "name": "sensor-hub",
+      "name": "system-bmc",
       "enabled": true,
+      "initialize": false,
       "poll": false
     }
   ],
