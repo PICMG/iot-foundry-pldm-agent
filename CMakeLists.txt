@@ -79,9 +79,18 @@ endif()
 set(PLDM_AGENT_SOURCES
     src/main.cpp
 )
+set(IOT1_SOURCES
+    src/iot1/pldm_transport.cpp
+    src/iot1/pdr.cpp
+    src/iot1/fru_record.cpp
+    src/iot1/endpoint.cpp
+    src/iot1/sensor.cpp
+    src/iot1/effecter.cpp
+    src/iot1/controller.cpp
+)
 
 # Create executable
-add_executable(pldm-agent ${PLDM_AGENT_SOURCES})
+add_executable(pldm-agent ${PLDM_AGENT_SOURCES} ${IOT1_SOURCES})
 
 # Add dependency on libpldm external project
 if(NOT PLDM_USE_SYSTEM_LIBPLDM)
@@ -104,7 +113,7 @@ endif()
 
 # Set library search path for external projects
 target_link_directories(pldm-agent PRIVATE
-    ${CMAKE_BINARY_DIR}/subprojects/mctp-serial-linux
+    ${CMAKE_BINARY_DIR}/subprojects/mctp-serial-linux/linux-mctp/libsermctp/src
 )
 
 if(NOT PLDM_USE_SYSTEM_LIBPLDM)

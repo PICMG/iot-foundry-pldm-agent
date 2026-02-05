@@ -7,6 +7,10 @@
 
 using json = nlohmann::json;
 
+namespace iot1::protocol {
+class PldmTransport;
+}
+
 namespace iot1::sensor {
 
 /**
@@ -24,6 +28,7 @@ protected:
     json lastValue;
 
     Sensor(uint16_t id, const std::string& name);
+    std::shared_ptr<::iot1::protocol::PldmTransport> transport;
 
 public:
     virtual ~Sensor() = default;
@@ -45,6 +50,8 @@ public:
     bool isInitialized() const { return initialized; }
 
     json getLastValue() const { return lastValue; }
+    std::shared_ptr<::iot1::protocol::PldmTransport> getTransport() const { return transport; }
+    void setTransport(std::shared_ptr<::iot1::protocol::PldmTransport> xport) { transport = xport; }
 };
 
 /**

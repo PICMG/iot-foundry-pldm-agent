@@ -1,4 +1,4 @@
-#include "fru_record.h"
+#include "iot1/config/fru_record.h"
 
 namespace iot1::config {
 

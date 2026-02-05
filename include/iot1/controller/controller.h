@@ -9,6 +9,10 @@
 
 using json = nlohmann::json;
 
+namespace iot1::protocol {
+class PldmTransport;
+}
+
 namespace iot1::controller {
 
 /**
@@ -27,6 +31,7 @@ protected:
     json lastOutput;
 
     Controller(uint16_t id, const std::string& name);
+    std::shared_ptr<::iot1::protocol::PldmTransport> transport;
 
 public:
     virtual ~Controller() = default;
@@ -51,6 +56,8 @@ public:
 
     bool isInitialized() const { return initialized; }
     bool isEnabled() const { return enabled; }
+    std::shared_ptr<::iot1::protocol::PldmTransport> getTransport() const { return transport; }
+    void setTransport(std::shared_ptr<::iot1::protocol::PldmTransport> xport) { transport = xport; }
 };
 
 /**

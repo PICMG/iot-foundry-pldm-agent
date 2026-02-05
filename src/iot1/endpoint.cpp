@@ -1,4 +1,4 @@
-#include "endpoint.h"
+#include "iot1/endpoint/endpoint.h"
 #include <iostream>
 
 namespace iot1::endpoint {

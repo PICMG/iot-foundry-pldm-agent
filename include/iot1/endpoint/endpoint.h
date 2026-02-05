@@ -6,6 +6,10 @@
 
 using json = nlohmann::json;
 
+namespace iot1::protocol {
+class PldmTransport;  // Forward declaration
+}
+
 namespace iot1::endpoint {
 
 class PDRRepository;  // Forward declaration
@@ -25,6 +29,7 @@ protected:
     bool initialized;
 
     Endpoint(uint16_t eid, const std::string& name);
+    std::shared_ptr<::iot1::protocol::PldmTransport> transport;
 
 public:
     virtual ~Endpoint() = default;
@@ -47,6 +52,8 @@ public:
 
     std::shared_ptr<PDRRepository> getPdrRepository() const { return pdrRepo; }
     void setPdrRepository(std::shared_ptr<PDRRepository> repo) { pdrRepo = repo; }
+    std::shared_ptr<::iot1::protocol::PldmTransport> getTransport() const { return transport; }
+    void setTransport(std::shared_ptr<::iot1::protocol::PldmTransport> xport) { transport = xport; }
 };
 
 /**

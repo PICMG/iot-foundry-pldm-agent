@@ -7,6 +7,10 @@
 
 using json = nlohmann::json;
 
+namespace iot1::protocol {
+class PldmTransport;
+}
+
 namespace iot1::effecter {
 
 /**
@@ -23,6 +27,7 @@ protected:
     json lastCommand;
 
     Effecter(uint16_t id, const std::string& name);
+    std::shared_ptr<::iot1::protocol::PldmTransport> transport;
 
 public:
     virtual ~Effecter() = default;
@@ -45,6 +50,8 @@ public:
     bool isInitialized() const { return initialized; }
 
     json getLastCommand() const { return lastCommand; }
+    std::shared_ptr<::iot1::protocol::PldmTransport> getTransport() const { return transport; }
+    void setTransport(std::shared_ptr<::iot1::protocol::PldmTransport> xport) { transport = xport; }
 };
 
 /**
