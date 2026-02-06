@@ -4,11 +4,12 @@
     "@odata.id": "/redfish/v1/AutomationNodes/Sensor1/AutomationInstrumentation",
     "Id": "Instrumentation",
     "Name": "Instrumentation for Simple Sensor AutomationNode",
-
-    "AssertInterlock": false,
-    "GeneralSensorReadings": [
-        0.0, 0.0, 0.0
-    ],
-    "InterlockValue": false,
-    "TriggerValue": false
+    "NodeState": "Idle",
+    "Status": {
+        "State": "Enabled",
+        "Health": "OK"
+    },
+    "Actions": {
+        "Oem": {}
+    }
 }

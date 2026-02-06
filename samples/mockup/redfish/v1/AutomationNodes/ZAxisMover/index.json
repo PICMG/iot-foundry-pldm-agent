@@ -21,29 +21,26 @@
 		},
 		"#AutomationNode.Wait": {
 			"target": "/redfish/v1/AutomationNodes/ZAxisMover/Actions/AutomationNode.Wait"
-		}
+		},
+		"Oem": {}
 	},
     "Instrumentation" : {
         "@odata.id" : "/redfish/v1/AutomationNodes/ZAxisMover/AutomationInstrumentation"
     },
 	"Links": {
-		"Chassis": {
-			"@odata.id" : "/redfish/v1/Chassis/ZAxisMover"
-		},
+		"Chassis": [
+			{
+				"@odata.id" : "/redfish/v1/Chassis/ZAxisMover"
+			}
+		],
 		"OutputControl": {
-			"@odata.id" : "/redfish/v1/Chassis/ZAxisMover/Controls/Output"
+			"@odata.id" : "/redfish/v1/Chassis/ZAxisMover/Controls/EFFECTER_ID_4"
 		},
 		"PositionSensor": {
 			"@odata.id" : "/redfish/v1/Chassis/ZAxisMover/Sensors/SENSOR_ID_7"
 		},
-		"PositionErrorSensor": {
-			"@odata.id" : "/redfish/v1/Chassis/ZAxisMover/Sensors/SENSOR_ID_5"
-		},
 		"VelocitySensor": {
 			"@odata.id" : "/redfish/v1/Chassis/ZAxisMover/Sensors/SENSOR_ID_6"
-		},
-		"VelocityErrorSensor": {
-			"@odata.id" : "/redfish/v1/Chassis/ZAxisMover/Sensors/SENSOR_ID_4"
 		}
 	},
 	"NodeType": "MotionPosition",

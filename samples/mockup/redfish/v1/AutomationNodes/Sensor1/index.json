@@ -10,22 +10,21 @@
 		},
 		"#AutomationNode.SendTrigger": {
 			"target": "/redfish/v1/AutomationNodes/Sensor1/Actions/AutomationNode.SendTrigger"
-		}
+		},
+		"Oem": {}
 	},
 	"Links": {
-		"Chassis": {
-			"@odata.id" : "/redfish/v1/Chassis/Sensor1"
-		},
-		"GeneralSensors": [
-			{ "@odata.id" : "/redfish/v1/Chassis/Sensor1/Sensors/Voltage" },
-			{ "@odata.id" : "/redfish/v1/Chassis/Sensor1/Sensors/Current" },
-			{ "@odata.id" : "/redfish/v1/Chassis/Sensor1/Sensors/Temperature" }
+		"Chassis": [
+			{
+				"@odata.id" : "/redfish/v1/Chassis/Sensor1"
+			}
 		]
 	},
 	"Instrumentation": {
         "@odata.id": "/redfish/v1/AutomationNodes/Sensor1/AutomationInstrumentation"
     },
 	"NodeType": "Simple",
+	"NodeState": "Idle",
 	"Status": {
         "State": "Enabled",
         "Health": "OK"

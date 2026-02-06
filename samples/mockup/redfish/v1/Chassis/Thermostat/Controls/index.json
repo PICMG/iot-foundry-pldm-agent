@@ -2,10 +2,13 @@
     "@odata.type": "#ControlCollection.ControlCollection",
     "Description": "A collection of controls",
     "Name": "Control Collection",
-    "Members@odata.count": 1,
+    "Members@odata.count": 2,
     "Members": [
         {
-            "@odata.id": "/redfish/v1/Chassis/Thermostat/Controls/Thermostat"
+            "@odata.id": "/redfish/v1/Chassis/Thermostat/Controls/EFFECTER_ID_4"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/Thermostat/Controls/EFFECTER_ID_1"
         }
      ],
     "@odata.context": "/redfish/v1/$metadata#ControlCollection.ControlCollection",

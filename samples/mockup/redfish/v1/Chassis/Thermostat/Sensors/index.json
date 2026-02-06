@@ -2,13 +2,16 @@
     "@odata.type": "#SensorCollection.SensorCollection",
     "Description": "A collection of sensors",
     "Name": "Sensor Collection",
-    "Members@odata.count": 2,
+    "Members@odata.count": 3,
     "Members": [
         {
-            "@odata.id": "/redfish/v1/Chassis/Thermostat/Sensors/Error"
+            "@odata.id": "/redfish/v1/Chassis/Thermostat/Sensors/SENSOR_ID_5"
         },
         {
-            "@odata.id": "/redfish/v1/Chassis/Thermostat/Sensors/Temperature"
+            "@odata.id": "/redfish/v1/Chassis/Thermostat/Sensors/SENSOR_ID_4"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/Thermostat/Sensors/SENSOR_ID_1"
         }
      ],
     "@odata.context": "/redfish/v1/$metadata#SensorCollection.SensorCollection",

@@ -8,7 +8,7 @@
         "State": "Enabled",
         "Health": "OK"
     },
-    "ControlMode": "Enabled",
+    "ControlMode": "Automatic",
     "SetPoint": 0,
     "SetPointUnits": "%",
     "AllowableMax": 1,
