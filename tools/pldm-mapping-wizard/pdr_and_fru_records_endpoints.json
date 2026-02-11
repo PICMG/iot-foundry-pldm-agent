@@ -1,0 +1,1008 @@
+{
+  "endpoints": [
+    {
+      "dev": "/dev/ttyUSB0",
+      "usb_addr": {
+        "sysfs_path": "/sys/devices/platform/vhci_hcd.0/usb1/1-1",
+        "idVendor": "0403",
+        "idProduct": "6001",
+        "serial": "ABAFROX1",
+        "manufacturer": "FTDI",
+        "product": "FT232R USB UART",
+        "busnum": 1,
+        "devnum": 12,
+        "usb_identifier": "1-12 0403:6001"
+      },
+      "pdr_records": [
+        {
+          "handle": 0,
+          "next_handle": 2,
+          "pdr_data": "01000000010101000900010001010100010101",
+          "decoded": {
+            "recordHandle": 1,
+            "PDRHeaderVersion": 1,
+            "PDRType": 1,
+            "recordChangeNumber": 1,
+            "recordLength": 9,
+            "PDRTypeName": "Terminus Locator PDR",
+            "PLDMTerminusHandle": 1,
+            "validity": 1,
+            "validityName": "valid",
+            "TID": 1,
+            "containerID": 1,
+            "terminusLocatorType": 1,
+            "terminusLocatorTypeName": "MCTP_EID",
+            "terminusLocatorValueSize": 1,
+            "terminusLocatorValue": {
+              "EID": 1
+            }
+          }
+        },
+        {
+          "handle": 2,
+          "next_handle": 3,
+          "pdr_data": "02000000011401000a0001000100500001000000",
+          "decoded": {
+            "recordHandle": 2,
+            "PDRHeaderVersion": 1,
+            "PDRType": 20,
+            "recordChangeNumber": 1,
+            "recordLength": 10,
+            "PDRTypeName": "FRU Record Set PDR",
+            "PLDMTerminusHandle": 1,
+            "FRURecordSetIdentifier": 1,
+            "entityType": 80,
+            "entityTypeName": "I/O module",
+            "entityInstanceNumber": 1,
+            "containerID": 0
+          }
+        },
+        {
+          "handle": 3,
+          "next_handle": 4,
+          "pdr_data": "03000000010f0100100001000150000100000001006001000100",
+          "decoded": {
+            "recordHandle": 3,
+            "PDRHeaderVersion": 1,
+            "PDRType": 15,
+            "recordChangeNumber": 1,
+            "recordLength": 16,
+            "PDRTypeName": "Entity Association PDR",
+            "containerEntityType": 1,
+            "containerEntityTypeName": "Other",
+            "containerEntityInstanceNumber": 20481,
+            "associationType": 0,
+            "associationTypeName": "Physical Containment",
+            "numberOfContainedEntities": 1,
+            "containedEntities": [
+              {
+                "containedEntityType": 0,
+                "containedEntityTypeName": "Unspecified",
+                "containedEntityInstanceNumber": 256
+              }
+            ]
+          }
+        },
+        {
+          "handle": 4,
+          "next_handle": 5,
+          "pdr_data": "04000000011101002000010000605a310000030001656e0000500072006f00660069006c006500640000",
+          "decoded": {
+            "recordHandle": 4,
+            "PDRHeaderVersion": 1,
+            "PDRType": 17,
+            "recordChangeNumber": 1,
+            "recordLength": 32,
+            "PDRTypeName": "OEM Entity ID PDR",
+            "PLDMTerminusHandle": 1,
+            "OEMEntityIDHandle": 24576,
+            "vendorIANA": 12634,
+            "vendorEntityID": 3,
+            "stringCount": 1,
+            "entityNames": [
+              {
+                "entityIDLanguageTag": "en",
+                "entityIDName": "Profiled"
+              }
+            ]
+          }
+        },
+        {
+          "handle": 5,
+          "next_handle": 6,
+          "pdr_data": "05000000010801006000010000805a31000001000102010101656e0000540072006900670067006500720041006300740069007600610074006500640000020201656e000054007200690067006700650072004400650061006300740069007600610074006500640000",
+          "decoded": {
+            "recordHandle": 5,
+            "PDRHeaderVersion": 1,
+            "PDRType": 8,
+            "recordChangeNumber": 1,
+            "recordLength": 96,
+            "PDRTypeName": "OEM State Set PDR",
+            "PLDMTerminusHandle": 1,
+            "OEMStateSetIDHandle": 32768,
+            "vendorIANA": 12634,
+            "OEMStateSetID": 1,
+            "unspecifiedValueHint": "treatAsError",
+            "stateCount": 2,
+            "OEMStateValueRecords": [
+              {
+                "minStateValue": 1,
+                "maxStateValue": 1,
+                "stringCount": 1,
+                "stateNames": [
+                  {
+                    "languageTag": "en",
+                    "stateName": "TriggerActivated"
+                  }
+                ]
+              },
+              {
+                "minStateValue": 2,
+                "maxStateValue": 2,
+                "stringCount": 1,
+                "stateNames": [
+                  {
+                    "languageTag": "en",
+                    "stateName": "TriggerDeactivated"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "handle": 6,
+          "next_handle": 7,
+          "pdr_data": "0600000001080100ae00010001805a31000004000107010101656e0000490064006c00650000020201656e000043006f006e0064006900740069006f006e00530074006f00700000030301656e00004500720072006f007200530074006f00700000040401656e0000520075006e006e0069006e006700560000050501656e0000520075006e006e0069006e006700500000060601656e0000570061006900740069006e00670000070701656e000044006f006e00650000",
+          "decoded": {
+            "recordHandle": 6,
+            "PDRHeaderVersion": 1,
+            "PDRType": 8,
+            "recordChangeNumber": 1,
+            "recordLength": 174,
+            "PDRTypeName": "OEM State Set PDR",
+            "PLDMTerminusHandle": 1,
+            "OEMStateSetIDHandle": 32769,
+            "vendorIANA": 12634,
+            "OEMStateSetID": 4,
+            "unspecifiedValueHint": "treatAsError",
+            "stateCount": 7,
+            "OEMStateValueRecords": [
+              {
+                "minStateValue": 1,
+                "maxStateValue": 1,
+                "stringCount": 1,
+                "stateNames": [
+                  {
+                    "languageTag": "en",
+                    "stateName": "Idle"
+                  }
+                ]
+              },
+              {
+                "minStateValue": 2,
+                "maxStateValue": 2,
+                "stringCount": 1,
+                "stateNames": [
+                  {
+                    "languageTag": "en",
+                    "stateName": "ConditionStop"
+                  }
+                ]
+              },
+              {
+                "minStateValue": 3,
+                "maxStateValue": 3,
+                "stringCount": 1,
+                "stateNames": [
+                  {
+                    "languageTag": "en",
+                    "stateName": "ErrorStop"
+                  }
+                ]
+              },
+              {
+                "minStateValue": 4,
+                "maxStateValue": 4,
+                "stringCount": 1,
+                "stateNames": [
+                  {
+                    "languageTag": "en",
+                    "stateName": "RunningV"
+                  }
+                ]
+              },
+              {
+                "minStateValue": 5,
+                "maxStateValue": 5,
+                "stringCount": 1,
+                "stateNames": [
+                  {
+                    "languageTag": "en",
+                    "stateName": "RunningP"
+                  }
+                ]
+              },
+              {
+                "minStateValue": 6,
+                "maxStateValue": 6,
+                "stringCount": 1,
+                "stateNames": [
+                  {
+                    "languageTag": "en",
+                    "stateName": "Waiting"
+                  }
+                ]
+              },
+              {
+                "minStateValue": 7,
+                "maxStateValue": 7,
+                "stringCount": 1,
+                "stateNames": [
+                  {
+                    "languageTag": "en",
+                    "stateName": "Done"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "handle": 7,
+          "next_handle": 8,
+          "pdr_data": "07000000010801003e00010002805a31000005000103010101656e00005300740061007200740000020201656e0000530074006f00700000030301656e0000570061006900740000",
+          "decoded": {
+            "recordHandle": 7,
+            "PDRHeaderVersion": 1,
+            "PDRType": 8,
+            "recordChangeNumber": 1,
+            "recordLength": 62,
+            "PDRTypeName": "OEM State Set PDR",
+            "PLDMTerminusHandle": 1,
+            "OEMStateSetIDHandle": 32770,
+            "vendorIANA": 12634,
+            "OEMStateSetID": 5,
+            "unspecifiedValueHint": "treatAsError",
+            "stateCount": 3,
+            "OEMStateValueRecords": [
+              {
+                "minStateValue": 1,
+                "maxStateValue": 1,
+                "stringCount": 1,
+                "stateNames": [
+                  {
+                    "languageTag": "en",
+                    "stateName": "Start"
+                  }
+                ]
+              },
+              {
+                "minStateValue": 2,
+                "maxStateValue": 2,
+                "stringCount": 1,
+                "stateNames": [
+                  {
+                    "languageTag": "en",
+                    "stateName": "Stop"
+                  }
+                ]
+              },
+              {
+                "minStateValue": 3,
+                "maxStateValue": 3,
+                "stringCount": 1,
+                "stateNames": [
+                  {
+                    "languageTag": "en",
+                    "stateName": "Wait"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "handle": 8,
+          "next_handle": 9,
+          "pdr_data": "08000000010b0100130001000100006001000100000000000160000103",
+          "decoded": {
+            "recordHandle": 8,
+            "PDRHeaderVersion": 1,
+            "PDRType": 11,
+            "recordChangeNumber": 1,
+            "recordLength": 19,
+            "PDRTypeName": "State Effecter PDR",
+            "PLDMTerminusHandle": 1,
+            "effecterID": 1,
+            "entityType": 24576,
+            "entityTypeName": "OEM System Integrator (0x6000)",
+            "entityInstanceNumber": 1,
+            "containerID": 1,
+            "effecterSemanticID": 0,
+            "effecterInit": 0,
+            "effecterInitName": "noInit",
+            "effecterDescriptionPDR": false,
+            "compositeEffecterCount": 1,
+            "stateSetPossibleStates": [
+              {
+                "stateSetID": 96,
+                "stateSetName": "Lock State",
+                "possibleStatesSize": 1,
+                "possibleStateValues": [
+                  {
+                    "stateValue": 1,
+                    "stateName": "Locked"
+                  },
+                  {
+                    "stateValue": 2,
+                    "stateName": "Unlocked"
+                  }
+                ],
+                "possibleStates_hex": "03"
+              }
+            ]
+          }
+        },
+        {
+          "handle": 9,
+          "next_handle": 10,
+          "pdr_data": "090000000104010011000100010000600100010000000160000103",
+          "decoded": {
+            "recordHandle": 9,
+            "PDRHeaderVersion": 1,
+            "PDRType": 4,
+            "recordChangeNumber": 1,
+            "recordLength": 17,
+            "PDRTypeName": "State Sensor PDR",
+            "PLDMTerminusHandle": 1,
+            "sensorID": 1,
+            "entityType": 24576,
+            "entityTypeName": "OEM System Integrator (0x6000)",
+            "entityInstanceNumber": 1,
+            "containerID": 1,
+            "sensorInit": 0,
+            "sensorInitName": "noInit",
+            "sensorAuxiliaryNamesPDR": false,
+            "compositeSensorCount": 1,
+            "stateSetPossibleStates": [
+              {
+                "stateSetID": 96,
+                "stateSetName": "Lock State",
+                "possibleStatesSize": 1,
+                "possibleStateValues": [
+                  {
+                    "stateValue": 1,
+                    "stateName": "Locked"
+                  },
+                  {
+                    "stateValue": 2,
+                    "stateName": "Unlocked"
+                  }
+                ],
+                "possibleStates_hex": "03"
+              }
+            ]
+          }
+        },
+        {
+          "handle": 10,
+          "next_handle": 11,
+          "pdr_data": "0a000000010b0100130001000200006001000100000000000100800103",
+          "decoded": {
+            "recordHandle": 10,
+            "PDRHeaderVersion": 1,
+            "PDRType": 11,
+            "recordChangeNumber": 1,
+            "recordLength": 19,
+            "PDRTypeName": "State Effecter PDR",
+            "PLDMTerminusHandle": 1,
+            "effecterID": 2,
+            "entityType": 24576,
+            "entityTypeName": "OEM System Integrator (0x6000)",
+            "entityInstanceNumber": 1,
+            "containerID": 1,
+            "effecterSemanticID": 0,
+            "effecterInit": 0,
+            "effecterInitName": "noInit",
+            "effecterDescriptionPDR": false,
+            "compositeEffecterCount": 1,
+            "stateSetPossibleStates": [
+              {
+                "stateSetID": 32768,
+                "stateSetName": "OEM State Set 1",
+                "possibleStatesSize": 1,
+                "possibleStateValues": [
+                  {
+                    "stateValue": 1,
+                    "stateName": "TriggerActivated"
+                  },
+                  {
+                    "stateValue": 2,
+                    "stateName": "TriggerDeactivated"
+                  }
+                ],
+                "possibleStates_hex": "03"
+              }
+            ]
+          }
+        },
+        {
+          "handle": 11,
+          "next_handle": 12,
+          "pdr_data": "0b0000000104010011000100020000600100010000000100800103",
+          "decoded": {
+            "recordHandle": 11,
+            "PDRHeaderVersion": 1,
+            "PDRType": 4,
+            "recordChangeNumber": 1,
+            "recordLength": 17,
+            "PDRTypeName": "State Sensor PDR",
+            "PLDMTerminusHandle": 1,
+            "sensorID": 2,
+            "entityType": 24576,
+            "entityTypeName": "OEM System Integrator (0x6000)",
+            "entityInstanceNumber": 1,
+            "containerID": 1,
+            "sensorInit": 0,
+            "sensorInitName": "noInit",
+            "sensorAuxiliaryNamesPDR": false,
+            "compositeSensorCount": 1,
+            "stateSetPossibleStates": [
+              {
+                "stateSetID": 32768,
+                "stateSetName": "OEM State Set 1",
+                "possibleStatesSize": 1,
+                "possibleStateValues": [
+                  {
+                    "stateValue": 1,
+                    "stateName": "TriggerActivated"
+                  },
+                  {
+                    "stateValue": 2,
+                    "stateName": "TriggerDeactivated"
+                  }
+                ],
+                "possibleStates_hex": "03"
+              }
+            ]
+          }
+        },
+        {
+          "handle": 12,
+          "next_handle": 13,
+          "pdr_data": "0c000000010201005f0001000700006001000100000026000000000000010001050ad7a3390000000064000000000000003f0f6f1283396f128339ffffff7f00000080056000000000000000000000000000093d0000f7c2ff000000000000000000127a0000ee85ff",
+          "decoded": {
+            "recordHandle": 12,
+            "PDRHeaderVersion": 1,
+            "PDRType": 2,
+            "recordChangeNumber": 1,
+            "recordLength": 95,
+            "PDRTypeName": "Numeric Sensor PDR",
+            "PLDMTerminusHandle": 1,
+            "sensorID": 7,
+            "entityType": 24576,
+            "entityTypeName": "OEM System Integrator (0x6000)",
+            "entityInstanceNumber": 1,
+            "containerID": 1,
+            "sensorInit": 0,
+            "sensorInitName": "noInit",
+            "sensorAuxiliaryNamesPDR": false,
+            "baseUnit": 38,
+            "baseUnitName": "Revolutions",
+            "unitModifier": 0,
+            "rateUnit": 0,
+            "rateUnitName": "None",
+            "baseOEMUnitHandle": 0,
+            "auxUnit": 0,
+            "auxUnitName": "None",
+            "auxUnitModifier": 0,
+            "auxRateUnit": 0,
+            "auxRateUnitName": "None",
+            "auxUnitRelationship": "multipliedBy",
+            "auxOEMUnitHandle": 0,
+            "isLinear": true,
+            "sensorDataSize": 5,
+            "sensorDataSizeName": "sint32",
+            "resolution": 0.0003124999930150807,
+            "offset": 0.0,
+            "accuracy": 100,
+            "plusTolerance": 0,
+            "minusTolerance": 0,
+            "hysteresis": 0,
+            "supportedThresholds": 63,
+            "supportedThresholdsFlags": {
+              "upperThresholdWarning": true,
+              "upperThresholdCritical": true,
+              "upperThresholdFatal": true,
+              "lowerThresholdWarning": true,
+              "lowerThresholdCritical": true,
+              "lowerThresholdFatal": true
+            },
+            "thresholdVolatility": 15,
+            "thresholdVolatilityFlags": {
+              "initAgentRestart": true,
+              "subsystemPowerUp": true,
+              "hardReset": true,
+              "warmReset": false,
+              "terminusOnline": false
+            },
+            "stateTransitionInterval": 0.0002500000118743628,
+            "updateInterval": 0.0002500000118743628,
+            "maxReadable": 2147483647,
+            "minReadable": -2147483648,
+            "rangeFieldFormat": 5,
+            "rangeFieldFormatName": "sint32",
+            "rangeFieldSupport": 96,
+            "rangeFieldSupportFlags": {
+              "nominalValueSupported": false,
+              "normalMaxSupported": false,
+              "normalMinSupported": false,
+              "criticalHighSupported": false,
+              "criticalLowSupported": false,
+              "fatalHighSupported": true,
+              "fatalLowSupported": true
+            },
+            "nominalValue": 0,
+            "normalMax": 0,
+            "normalMin": 0,
+            "warningHigh": 4000000,
+            "warningLow": -4000000,
+            "criticalHigh": 0,
+            "criticalLow": 0,
+            "fatalHigh": 8000000,
+            "fatalLow": -8000000
+          }
+        },
+        {
+          "handle": 13,
+          "next_handle": 14,
+          "pdr_data": "0d0000000104010011000100080000600100010000000143000103",
+          "decoded": {
+            "recordHandle": 13,
+            "PDRHeaderVersion": 1,
+            "PDRType": 4,
+            "recordChangeNumber": 1,
+            "recordLength": 17,
+            "PDRTypeName": "State Sensor PDR",
+            "PLDMTerminusHandle": 1,
+            "sensorID": 8,
+            "entityType": 24576,
+            "entityTypeName": "OEM System Integrator (0x6000)",
+            "entityInstanceNumber": 1,
+            "containerID": 1,
+            "sensorInit": 0,
+            "sensorInitName": "noInit",
+            "sensorAuxiliaryNamesPDR": false,
+            "compositeSensorCount": 1,
+            "stateSetPossibleStates": [
+              {
+                "stateSetID": 67,
+                "stateSetName": "Switch State",
+                "possibleStatesSize": 1,
+                "possibleStateValues": [
+                  {
+                    "stateValue": 1,
+                    "stateName": "Pressed/On"
+                  },
+                  {
+                    "stateValue": 2,
+                    "stateName": "Released/Off"
+                  }
+                ],
+                "possibleStates_hex": "03"
+              }
+            ]
+          }
+        },
+        {
+          "handle": 14,
+          "next_handle": 15,
+          "pdr_data": "0e0000000104010011000100090000600100010000000143000103",
+          "decoded": {
+            "recordHandle": 14,
+            "PDRHeaderVersion": 1,
+            "PDRType": 4,
+            "recordChangeNumber": 1,
+            "recordLength": 17,
+            "PDRTypeName": "State Sensor PDR",
+            "PLDMTerminusHandle": 1,
+            "sensorID": 9,
+            "entityType": 24576,
+            "entityTypeName": "OEM System Integrator (0x6000)",
+            "entityInstanceNumber": 1,
+            "containerID": 1,
+            "sensorInit": 0,
+            "sensorInitName": "noInit",
+            "sensorAuxiliaryNamesPDR": false,
+            "compositeSensorCount": 1,
+            "stateSetPossibleStates": [
+              {
+                "stateSetID": 67,
+                "stateSetName": "Switch State",
+                "possibleStatesSize": 1,
+                "possibleStateValues": [
+                  {
+                    "stateValue": 1,
+                    "stateName": "Pressed/On"
+                  },
+                  {
+                    "stateValue": 2,
+                    "stateName": "Released/Off"
+                  }
+                ],
+                "possibleStates_hex": "03"
+              }
+            ]
+          }
+        },
+        {
+          "handle": 15,
+          "next_handle": 16,
+          "pdr_data": "0f000000010b010013000100030000600100010000000000010280010f",
+          "decoded": {
+            "recordHandle": 15,
+            "PDRHeaderVersion": 1,
+            "PDRType": 11,
+            "recordChangeNumber": 1,
+            "recordLength": 19,
+            "PDRTypeName": "State Effecter PDR",
+            "PLDMTerminusHandle": 1,
+            "effecterID": 3,
+            "entityType": 24576,
+            "entityTypeName": "OEM System Integrator (0x6000)",
+            "entityInstanceNumber": 1,
+            "containerID": 1,
+            "effecterSemanticID": 0,
+            "effecterInit": 0,
+            "effecterInitName": "noInit",
+            "effecterDescriptionPDR": false,
+            "compositeEffecterCount": 1,
+            "stateSetPossibleStates": [
+              {
+                "stateSetID": 32770,
+                "stateSetName": "OEM State Set 5",
+                "possibleStatesSize": 1,
+                "possibleStateValues": [
+                  {
+                    "stateValue": 1,
+                    "stateName": "Start"
+                  },
+                  {
+                    "stateValue": 2,
+                    "stateName": "Stop"
+                  },
+                  {
+                    "stateValue": 3,
+                    "stateName": "Wait"
+                  },
+                  {
+                    "stateValue": 4,
+                    "stateName": "Unknown(0x04)"
+                  }
+                ],
+                "possibleStates_hex": "0f"
+              }
+            ]
+          }
+        },
+        {
+          "handle": 16,
+          "next_handle": 17,
+          "pdr_data": "10000000010401001100010003000060010001000000010180017f",
+          "decoded": {
+            "recordHandle": 16,
+            "PDRHeaderVersion": 1,
+            "PDRType": 4,
+            "recordChangeNumber": 1,
+            "recordLength": 17,
+            "PDRTypeName": "State Sensor PDR",
+            "PLDMTerminusHandle": 1,
+            "sensorID": 3,
+            "entityType": 24576,
+            "entityTypeName": "OEM System Integrator (0x6000)",
+            "entityInstanceNumber": 1,
+            "containerID": 1,
+            "sensorInit": 0,
+            "sensorInitName": "noInit",
+            "sensorAuxiliaryNamesPDR": false,
+            "compositeSensorCount": 1,
+            "stateSetPossibleStates": [
+              {
+                "stateSetID": 32769,
+                "stateSetName": "OEM State Set 4",
+                "possibleStatesSize": 1,
+                "possibleStateValues": [
+                  {
+                    "stateValue": 1,
+                    "stateName": "Idle"
+                  },
+                  {
+                    "stateValue": 2,
+                    "stateName": "ConditionStop"
+                  },
+                  {
+                    "stateValue": 3,
+                    "stateName": "ErrorStop"
+                  },
+                  {
+                    "stateValue": 4,
+                    "stateName": "RunningV"
+                  },
+                  {
+                    "stateValue": 5,
+                    "stateName": "RunningP"
+                  },
+                  {
+                    "stateValue": 6,
+                    "stateName": "Waiting"
+                  },
+                  {
+                    "stateValue": 7,
+                    "stateName": "Done"
+                  }
+                ],
+                "possibleStates_hex": "7f"
+              }
+            ]
+          }
+        },
+        {
+          "handle": 17,
+          "next_handle": 18,
+          "pdr_data": "11000000010901004a000100040000600100010000000000260000000000000001050ad7a33900000000000000006f1283396f128339ffffff7f0000000006000000000000000000000000000000000000000000",
+          "decoded": {
+            "recordHandle": 17,
+            "PDRHeaderVersion": 1,
+            "PDRType": 9,
+            "recordChangeNumber": 1,
+            "recordLength": 74,
+            "PDRTypeName": "Numeric Effecter PDR",
+            "PLDMTerminusHandle": 1,
+            "effecterID": 4,
+            "entityType": 24576,
+            "entityTypeName": "OEM System Integrator (0x6000)",
+            "entityInstanceNumber": 1,
+            "containerID": 1,
+            "effecterSemanticID": 0,
+            "effecterInit": 0,
+            "effecterInitName": "noInit",
+            "effecterAuxiliaryNamesPDR": false,
+            "baseUnit": 38,
+            "baseUnitName": "Revolutions",
+            "unitModifier": 0,
+            "rateUnit": 0,
+            "rateUnitName": "None",
+            "baseOEMUnitHandle": 0,
+            "auxUnit": 0,
+            "auxUnitName": "None",
+            "auxUnitModifier": 0,
+            "auxRateUnit": 0,
+            "auxRateUnitName": "None",
+            "auxOEMUnitHandle": 0,
+            "isLinear": true,
+            "effecterDataSize": 5,
+            "effecterDataSizeName": "sint32",
+            "resolution": 0.0003124999930150807,
+            "offset": 0.0,
+            "accuracy": 0,
+            "plusTolerance": 0,
+            "minusTolerance": 0,
+            "stateTransitionInterval": 0.0002500000118743628,
+            "transitionInterval": 0.0002500000118743628,
+            "maxSettable": 2147483647,
+            "minSettable": 0,
+            "rangeFieldFormat": 6,
+            "rangeFieldFormatName": "real32",
+            "rangeFieldSupport": 0,
+            "rangeFieldSupportFlags": {
+              "nominalValueSupported": false,
+              "normalMaxSupported": false,
+              "normalMinSupported": false,
+              "ratedMaxSupported": false,
+              "ratedMinSupported": false
+            },
+            "nominalValue": 0.0,
+            "normalMax": 0.0,
+            "normalMin": 0.0,
+            "ratedMax": 0.0,
+            "ratedMin": 0.0
+          }
+        },
+        {
+          "handle": 18,
+          "next_handle": 19,
+          "pdr_data": "12000000010901004a000100050000600100010000000000260003000000000001050000a03700000000000000006f1283396f128339ffffff7f0000000006000000000000000000000000000000000000000000",
+          "decoded": {
+            "recordHandle": 18,
+            "PDRHeaderVersion": 1,
+            "PDRType": 9,
+            "recordChangeNumber": 1,
+            "recordLength": 74,
+            "PDRTypeName": "Numeric Effecter PDR",
+            "PLDMTerminusHandle": 1,
+            "effecterID": 5,
+            "entityType": 24576,
+            "entityTypeName": "OEM System Integrator (0x6000)",
+            "entityInstanceNumber": 1,
+            "containerID": 1,
+            "effecterSemanticID": 0,
+            "effecterInit": 0,
+            "effecterInitName": "noInit",
+            "effecterAuxiliaryNamesPDR": false,
+            "baseUnit": 38,
+            "baseUnitName": "Revolutions",
+            "unitModifier": 0,
+            "rateUnit": 3,
+            "rateUnitName": "Per Second",
+            "baseOEMUnitHandle": 0,
+            "auxUnit": 0,
+            "auxUnitName": "None",
+            "auxUnitModifier": 0,
+            "auxRateUnit": 0,
+            "auxRateUnitName": "None",
+            "auxOEMUnitHandle": 0,
+            "isLinear": true,
+            "effecterDataSize": 5,
+            "effecterDataSizeName": "sint32",
+            "resolution": 1.9073486328125e-05,
+            "offset": 0.0,
+            "accuracy": 0,
+            "plusTolerance": 0,
+            "minusTolerance": 0,
+            "stateTransitionInterval": 0.0002500000118743628,
+            "transitionInterval": 0.0002500000118743628,
+            "maxSettable": 2147483647,
+            "minSettable": 0,
+            "rangeFieldFormat": 6,
+            "rangeFieldFormatName": "real32",
+            "rangeFieldSupport": 0,
+            "rangeFieldSupportFlags": {
+              "nominalValueSupported": false,
+              "normalMaxSupported": false,
+              "normalMinSupported": false,
+              "ratedMaxSupported": false,
+              "ratedMinSupported": false
+            },
+            "nominalValue": 0.0,
+            "normalMax": 0.0,
+            "normalMin": 0.0,
+            "ratedMax": 0.0,
+            "ratedMin": 0.0
+          }
+        },
+        {
+          "handle": 19,
+          "next_handle": 0,
+          "pdr_data": "13000000010901004a0001000600006001000100000000002600030000000300010500409c3d00000000000000006f1283396f128339ffffff7f0000000006000000000000000000000000000000000000000000",
+          "decoded": {
+            "recordHandle": 19,
+            "PDRHeaderVersion": 1,
+            "PDRType": 9,
+            "recordChangeNumber": 1,
+            "recordLength": 74,
+            "PDRTypeName": "Numeric Effecter PDR",
+            "PLDMTerminusHandle": 1,
+            "effecterID": 6,
+            "entityType": 24576,
+            "entityTypeName": "OEM System Integrator (0x6000)",
+            "entityInstanceNumber": 1,
+            "containerID": 1,
+            "effecterSemanticID": 0,
+            "effecterInit": 0,
+            "effecterInitName": "noInit",
+            "effecterAuxiliaryNamesPDR": false,
+            "baseUnit": 38,
+            "baseUnitName": "Revolutions",
+            "unitModifier": 0,
+            "rateUnit": 3,
+            "rateUnitName": "Per Second",
+            "baseOEMUnitHandle": 0,
+            "auxUnit": 0,
+            "auxUnitName": "None",
+            "auxUnitModifier": 0,
+            "auxRateUnit": 3,
+            "auxRateUnitName": "Per Second",
+            "auxOEMUnitHandle": 0,
+            "isLinear": true,
+            "effecterDataSize": 5,
+            "effecterDataSizeName": "sint32",
+            "resolution": 0.0762939453125,
+            "offset": 0.0,
+            "accuracy": 0,
+            "plusTolerance": 0,
+            "minusTolerance": 0,
+            "stateTransitionInterval": 0.0002500000118743628,
+            "transitionInterval": 0.0002500000118743628,
+            "maxSettable": 2147483647,
+            "minSettable": 0,
+            "rangeFieldFormat": 6,
+            "rangeFieldFormatName": "real32",
+            "rangeFieldSupport": 0,
+            "rangeFieldSupportFlags": {
+              "nominalValueSupported": false,
+              "normalMaxSupported": false,
+              "normalMinSupported": false,
+              "ratedMaxSupported": false,
+              "ratedMinSupported": false
+            },
+            "nominalValue": 0.0,
+            "normalMax": 0.0,
+            "normalMin": 0.0,
+            "ratedMax": 0.0,
+            "ratedMin": 0.0
+          }
+        }
+      ],
+      "fru_records": [
+        {
+          "metadata": {
+            "fru_major_version": 1,
+            "fru_minor_version": 0,
+            "fru_table_max_size": 30,
+            "fru_table_length": 45,
+            "num_record_sets": 1,
+            "num_records": 2,
+            "crc32_checksum": 52352030
+          },
+          "data_length": 49,
+          "parsed_records": [
+            {
+              "required": true,
+              "description": null,
+              "fields": [
+                {
+                  "type": 2,
+                  "typeName": "Model",
+                  "required": true,
+                  "description": null,
+                  "format": "strUTF-8",
+                  "length": 8,
+                  "value": "Microsam"
+                },
+                {
+                  "type": 6,
+                  "typeName": "Manufacture Date",
+                  "required": true,
+                  "description": null,
+                  "format": "timestamp104",
+                  "length": 13,
+                  "value": "0513-03-04T05:06:07.08090a0b0c0dZ"
+                }
+              ]
+            },
+            {
+              "required": true,
+              "description": null,
+              "fields": [
+                {
+                  "type": 0,
+                  "typeName": "OEM-defined",
+                  "required": true,
+                  "description": null,
+                  "format": "octetArray",
+                  "length": 2,
+                  "value": [
+                    49,
+                    48
+                  ]
+                },
+                {
+                  "type": 1,
+                  "typeName": "Vendor IANA",
+                  "required": true,
+                  "description": null,
+                  "format": "uint32",
+                  "length": 4,
+                  "value": 134480384
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "error": null,
+      "raw_fru_data": "AQABAgICCE1pY3Jvc2FtBg0BAgMEBQYHCAkKCwwNAQD+AgIAAjEwAQQAAgQIHtQeAw=="
+    }
+  ]
+}

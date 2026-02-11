@@ -1,0 +1,17 @@
+{
+    "@odata.type": "#Port.v1_18_0.Port",
+    "Id": "3",
+    "Name": "USB Port 3",
+    "Description": "USB Port 3",
+    "PortId": "Hardware_Identifier",
+    "Location": {
+        "PartLocation": {
+            "ServiceLabel": "USB",
+            "LocationOrdinalValue": 3,
+            "LocationType": "Connector",
+            "Reference": "Rear"
+        }
+    },
+    "@odata.id": "/redfish/v1/Systems/1/USBControllers/USB1/Ports/3"
+
+}

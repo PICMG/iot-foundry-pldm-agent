@@ -6,6 +6,7 @@ out/
 references/
 SchemaFiles/
 logs/
+output/
 
 # CMake
 CMakeUserPresets.json

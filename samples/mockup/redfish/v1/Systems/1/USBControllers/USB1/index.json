@@ -1,0 +1,9 @@
+{
+    "@odata.type": "#USBController.v1_0_1.USBController",
+    "Id": "USB1",
+    "Name": "Main USB Controller",
+    "Ports": {
+        "@odata.id": "/redfish/v1/Systems/1/USBControllers/USB1/Ports"
+    },
+    "@odata.id": "/redfish/v1/Systems/1/USBControllers/USB1"
+}

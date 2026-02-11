@@ -24,40 +24,42 @@ A separate command-line tool that guides users through the mapping configuration
 5. **Generates** ready-to-use configuration files
 6. **Documents** custom mappings with rationale
 
-## Workflow
+## Workflow: Sequential Device Configuration
 
 ```
-┌─────────────────┐
-│ 1. Connection   │ → Load config.json, connect to endpoints
-└────────┬────────┘
+┌──────────────────────────────┐
+│ 1. Load Redfish Schemas      │ → Load DMTF schemas and cache in memory
+│    (once, at startup)        │    Reused for all devices
+└────────┬─────────────────────┘
          │
-┌────────▼────────┐
-│ 2. Discovery    │ → Retrieve all PDRs and FRU records
-└────────┬────────┘
+┌────────▼──────────────────────┐
+│ 2. Port Scanning Loop and     │ → Scan selected /dev/ttyUSB* and /dev/ttyACM*
+│    PDR Discovery              │ → Retrieve USB hardware address
+│    (with retry on failure)    │ → Retrieve PDRs from devices  
+└────────┬──────────────────────┘
          │
-┌────────▼────────┐
-│ 3. Redfish      │ → Load target Redfish schema/mockup
-│    Context      │
-└────────┬────────┘
+┌────────▼──────────────────────┐
+│ 3. Select mockup              │ → Prompt user for mockup location (online?)
+│                               │    
+└────────┬──────────────────────┘
          │
-┌────────▼────────┐
-│ 4. Interactive  │ → For each PDR:
-│    Mapping      │    - Show PLDM data structure
-│                 │    - Suggest Redfish resource
-│                 │    - Map fields interactively
-│                 │    - Handle transforms (units, enums)
-└────────┬────────┘
+┌────────▼──────────────────────┐
+│ 4. Select Computer System     │ → Ask: Computer system and USB to connect to
+│    And usb controller         │    If only one system - use that
+└────────┬──────────────────────┘    If no USB Controller, create it
          │
-┌────────▼────────┐
-│ 5. Validation   │ → Test mappings against schemas
-└────────┬────────┘
+┌────────▼──────────────────────┐
+│ 6. Interactive Mapping        │ → For each PDR on this device:
+│                               │    - Create missing chassis and system
+│                               │    - Create Automation node and automationinstrumentation
+│                               │    - Create cables
+│                               │    - Interactively request input for mapping 
+└────────┬──────────────────────┘
          │
-┌────────▼────────┐
-│ 6. Output       │ → Generate:
-│                 │    - pdr_redfish_mappings.json
-│                 │    - mapping_documentation.md
-│                 │    - validation_report.json
-└─────────────────┘
+┌────────▼──────────────────────┐
+│ 7. Accumulate to Output       │ → Append mappings to json
+│                               │   
+└───────────────────────────────┘
 ```
 
 ## Technology Stack
@@ -91,22 +93,25 @@ tools/pldm-mapping-wizard/
 │   ├── cli.py                   # Click commands
 │   ├── discovery/
 │   │   ├── __init__.py
-│   │   ├── pdr_retriever.py    # GetPDRRepositoryInfo, GetPDR
+│   │   ├── port_monitor.py     # Watch /dev/ttyUSB* and /dev/ttyACM*
+│   │   ├── usb_info.py         # Extract USB hardware address (vid:pid:serial)
+│   │   ├── pdr_retriever.py    # GetPDRRepositoryInfo, GetPDR with retry
 │   │   ├── fru_reader.py       # FRU data parsing
-│   │   └── endpoint_probe.py   # Endpoint enumeration
+│   │   └── endpoint_probe.py   # Connect to single port
 │   ├── mapping/
 │   │   ├── __init__.py
 │   │   ├── interactive.py      # Rich-based UI for field mapping
 │   │   ├── suggestions.py      # IoT.2 standard mapping suggestions
 │   │   ├── transforms.py       # Unit conversions, enum mappings
+│   │   ├── device_mapper.py    # Per-device mapping with accumulation
 │   │   └── validators.py       # Mapping rule validation
 │   ├── redfish/
 │   │   ├── __init__.py
-│   │   ├── schema_loader.py    # Load DMTF schemas
+│   │   ├── schema_loader.py    # Load DMTF schemas (once, cached)
 │   │   └── resource_builder.py # Generate Redfish JSON from mappings
 │   └── output/
 │       ├── __init__.py
-│       ├── config_writer.py    # Write pdr_redfish_mappings.json
+│       ├── config_writer.py    # Append to pdr_redfish_mappings.json
 │       └── doc_generator.py    # Generate mapping documentation
 └── tests/
     └── ...
@@ -117,17 +122,21 @@ tools/pldm-mapping-wizard/
 ### Full Interactive Session
 
 ```bash
-$ pldm-mapping-wizard --config /etc/iot-foundry/config.json
+$ pldm-mapping-wizard setup --output /etc/iot-foundry/pdr_redfish_mappings.json
 
-🔍 Discovering PLDM endpoints...
-   ✓ Found 2 endpoints (EID 8, EID 9)
+� Loading Redfish schemas...
+   ✓ Loaded: Chassis, Sensor, Control, Assembly (cached in memory)
 
-📥 Retrieving PDRs...
-   ✓ EID 8: 47 PDRs (23 sensors, 12 effecters, 4 FRU records)
-   ✓ EID 9: 31 PDRs (18 sensors, 8 effecters, 2 FRU records)
+🔍 Watching for USB/ACM devices...
+Insert PLDM device #1 and press ENTER (or 'q' to quit): [ENTER]
 
-📚 Loading Redfish schemas...
-   ✓ Loaded: Chassis, Sensor, Control, Assembly
+  ✓ Device detected on /dev/ttyUSB0
+  ✓ USB hardware address: usb-Silicon_Labs_CP2102_USB_to_UART_Bridge_Controller_01A234B5-if00
+
+Device identifier (connector/slot name) [Node_1]: Slot-A
+
+📥 Retrieving PDRs from /dev/ttyUSB0...
+   ✓ Found 47 PDRs (23 sensors, 12 effecters, 4 FRU records)
 
 ═══════════════════════════════════════════════════════════
 Mapping PDR: Numeric Sensor (ID 5)
@@ -141,7 +150,7 @@ Thresholds: Warning=80, Critical=95, Fatal=105
 
 Suggested Redfish Resource:
   Type: Sensor
-  Collection: /redfish/v1/Chassis/Node_8/Sensors
+  Collection: /redfish/v1/Chassis/Slot_A/Sensors
   Id: SENSOR_ID_5
 
 Map this sensor? [Y/n]: y
@@ -151,41 +160,77 @@ Upper threshold warning [80.0]:
 Upper threshold critical [95.0]: 
 Upper threshold fatal [105.0]: 
 
-✓ Mapped: CPU_TEMP → /redfish/v1/Chassis/Node_8/Sensors/CPU_TEMP
+✓ Mapped: CPU_TEMP → /redfish/v1/Chassis/Slot_A/Sensors/CPU_TEMP
 
 ═══════════════════════════════════════════════════════════
-Mapping PDR: State Effecter (ID 1)
-───────────────────────────────────────────────────────────
-Name: "GLOBAL_INTERLOCK"
-Entity: I/O Module (ID 12)
-States: 0=Deasserted, 1=Asserted
-───────────────────────────────────────────────────────────
+... (continue for all PDRs on this device)
 
-Suggested Redfish Resource:
-  Type: Control
-  Collection: /redfish/v1/Chassis/Node_8/Controls
-  Id: EFFECTER_ID_1
+✅ Device "Slot-A" configured! 47 PDRs mapped to Redfish resources.
+📝 Saved to pdr_redfish_mappings.json
 
-Map this effecter? [Y/n]: y
-Redfish control Id [EFFECTER_ID_1]: GlobalInterlock
-Control type [Percent|Frequency|Duty]: (custom binary control)
+────────────────────────────────────────────────────────────
+Remove device and insert next one, then press ENTER
+(or 'q' to finish): [ENTER]
 
-✓ Mapped: GlobalInterlock → /redfish/v1/Chassis/Node_8/Controls/GlobalInterlock
+🔍 Waiting for next device...
+Insert PLDM device #2 and press ENTER (or 'q' to quit): [ENTER]
 
-... (continue for all PDRs)
+  ✓ Device detected on /dev/ttyUSB0
+  ✓ USB hardware address: usb-Silicon_Labs_CP2102_USB_to_UART_Bridge_Controller_02B345C6-if00
 
-✅ Mapping complete! 54 PDRs mapped to Redfish resources.
+Device identifier (connector/slot name) [Node_2]: Slot-B
 
-📝 Generating output files...
-   ✓ pdr_redfish_mappings.json (12.3 KB)
-   ✓ mapping_documentation.md (8.7 KB)
-   ✓ validation_report.json (2.1 KB)
+📥 Retrieving PDRs from /dev/ttyUSB0...
+   ✓ Found 31 PDRs (18 sensors, 8 effecters, 2 FRU records)
 
-Run validation:
-  $ pldm-mapping-wizard validate --mappings pdr_redfish_mappings.json
+═══════════════════════════════════════════════════════════
+... (continue for all PDRs on this device)
+
+✅ Device "Slot-B" configured! 31 PDRs mapped to Redfish resources.
+📝 Appended to pdr_redfish_mappings.json
+
+────────────────────────────────────────────────────────────
+Remove device and insert next one, then press ENTER
+(or 'q' to finish): q
+
+✅ Configuration complete! 78 PDRs mapped across 2 devices.
+
+📝 Generated output files:
+   ✓ pdr_redfish_mappings.json (18.5 KB, 2 devices)
+   ✓ mapping_documentation.md (11.2 KB)
+   ✓ validation_report.json (3.4 KB)
 
 Test with agent:
   $ iot-foundry-pldm-agent --config config.json --mappings pdr_redfish_mappings.json
+```
+
+### Retry on Connection Failure
+
+```bash
+Insert PLDM device #1 and press ENTER (or 'q' to quit): [ENTER]
+
+  ✓ Device detected on /dev/ttyUSB0
+
+📥 Retrieving PDRs from /dev/ttyUSB0...
+   ✗ Connection lost mid-transfer. Retrying...
+   ✗ Failed to retrieve PDRs: Timeout
+
+Options:
+  [r] Retry (remove device, reinsert, and try again)
+  [s] Skip this device
+  [q] Quit
+  
+Choose: [r]: r
+
+Remove device and press ENTER when ready: [ENTER]
+Insert device and press ENTER when ready: [ENTER]
+
+  ✓ Device detected on /dev/ttyUSB0
+  
+📥 Retrieving PDRs from /dev/ttyUSB0...
+   ✓ Found 47 PDRs
+
+(continue mapping...)
 ```
 
 ### Non-Interactive Mode (Automation)
@@ -205,11 +250,13 @@ $ pldm-mapping-wizard generate --config config.json --template oem_vendor.yaml \
 ```json
 {
   "version": "1.0",
-  "generated": "2026-02-05T14:23:01Z",
-  "endpoints": [
+  "generated": "2026-02-06T14:23:01Z",
+  "devices": [
     {
+      "connector": "Slot-A",
+      "usb_hardware_address": "usb-Silicon_Labs_CP2102_USB_to_UART_Bridge_Controller_01A234B5-if00",
       "eid": 8,
-      "chassis_resource": "/redfish/v1/Chassis/Node_8",
+      "chassis_resource": "/redfish/v1/Chassis/Slot_A",
       "sensors": [
         {
           "pdr_id": 5,
@@ -219,7 +266,7 @@ $ pldm-mapping-wizard generate --config config.json --template oem_vendor.yaml \
           "entity_type": 3,
           "entity_instance": 0,
           "redfish_id": "CPU_TEMP",
-          "redfish_uri": "/redfish/v1/Chassis/Node_8/Sensors/CPU_TEMP",
+          "redfish_uri": "/redfish/v1/Chassis/Slot_A/Sensors/CPU_TEMP",
           "field_mappings": {
             "reading": {
               "source": "sensor_reading",
@@ -245,7 +292,7 @@ $ pldm-mapping-wizard generate --config config.json --template oem_vendor.yaml \
           "effecter_id": 1,
           "pldm_name": "GLOBAL_INTERLOCK",
           "redfish_id": "GlobalInterlock",
-          "redfish_uri": "/redfish/v1/Chassis/Node_8/Controls/GlobalInterlock",
+          "redfish_uri": "/redfish/v1/Chassis/Slot_A/Controls/GlobalInterlock",
           "control_type": "Duty",
           "field_mappings": {
             "controlPercent": {
@@ -270,10 +317,24 @@ $ pldm-mapping-wizard generate --config config.json --template oem_vendor.yaml \
           }
         }
       }
+    },
+    {
+      "connector": "Slot-B",
+      "usb_hardware_address": "usb-Silicon_Labs_CP2102_USB_to_UART_Bridge_Controller_02B345C6-if00",
+      "eid": 9,
+      "chassis_resource": "/redfish/v1/Chassis/Slot_B",
+      "sensors": [...],
+      "controls": [...]
     }
   ]
 }
 ```
+
+**Key fields:**
+- `connector`: User-provided identifier for documentation (not used by agent, but aids troubleshooting)
+- `usb_hardware_address`: Extracted from device symlink; persists across reboots and `/dev/ttyUSB*` reassignments
+- `eid`: Endpoint ID assigned during discovery (may differ from connector)
+- All other fields: per-device PDR mappings (same structure as before)
 
 ## Integration with Main Agent
 
@@ -289,31 +350,37 @@ The wizard is **development/setup time** tool. The agent **runtime** uses its ou
 
 ## Implementation Phases
 
-### Phase 1: PDR Discovery (Week 1)
-- Connect to endpoints via config.json
-- Implement GetPDRRepositoryInfo command
-- Implement GetPDR command with pagination
+### Phase 1: Device Detection & PDR Discovery (Week 1)
+- Load Redfish schemas at startup (before device loop)
+- Watch `/dev/ttyUSB*` and `/dev/ttyACM*` for new devices
+- Extract USB hardware address from device symlinks (vid:pid:serial)
+- Connect to single port (vs. config.json discovery)
+- Implement GetPDRRepositoryInfo command with retry logic
+- Implement GetPDR command with pagination and error recovery
 - Parse and display PDR contents (numeric sensor, state sensor, etc.)
 - Read and parse FRU data
+- Prompt user for connector/slot identification
 
-### Phase 2: Interactive Mapping (Week 2)
-- Rich UI for PDR display
-- Field-by-field mapping prompts
-- IoT.2 default suggestions
+### Phase 2: Interactive Mapping with Accumulation (Week 2)
+- Rich UI for PDR display per device
+- Field-by-field mapping prompts with IoT.2 default suggestions
 - Basic transform support (unit conversions)
-- Output pdr_redfish_mappings.json
+- Device mapper: append new device to pdr_redfish_mappings.json
+- Prompt for next device (loop until user quits)
+- Output pdr_redfish_mappings.json with accumulated devices
 
 ### Phase 3: Validation & Testing (Week 3)
-- JSON schema validation
+- JSON schema validation for accumulated mappings
 - Redfish schema compliance checks
-- Test against live endpoints
+- Test against live endpoints with retry logic
 - Error reporting and diagnostics
+- Validate USB hardware addresses don't collide
 
 ### Phase 4: Advanced Features (Week 4+)
 - Templates for common configurations
-- Batch mode for automation
-- Diff/merge existing mappings
+- Diff/merge existing device mappings
 - OEM extension support
+- Batch mode for non-interactive setup (for factory automation)
 
 ## Benefits
 

@@ -10,6 +10,11 @@
         "@odata.id": "/redfish/v1/Chassis/Aggregator"
       }
     ],
+    "UpstreamPorts": [
+      {
+        "@odata.id": "/redfish/v1/Systems/1/USBControllers/USB1/Ports/2"
+      }
+    ],
     "DownstreamChassis": [
       {
         "@odata.id": "/redfish/v1/Chassis/YAxisMover"

@@ -9,34 +9,12 @@
         "State": "Enabled",
         "Health": "OK"
     },
-    "Oem": {
-        "PICMG": {
-            "@odata.type": "#PICMGAutomationInstrumentation.v1_0_0.PICMGAutomationInstrumentation",
-            "Position": {
-                "Reading": 0.0,
-                "SetPoint": 0.0503,
-                "SetPointUnits": "m",
-                "AllowableMin": 0,
-                "AllowableMax": 0.0600,
-                "DataSourceUri": "/redfish/v1/Chassis/XAxisMover/Controls/EFFECTER_ID_4"
-            },
-            "Velocity": {
-                "Reading": 0.0,
-                "SetPoint": 0.0,
-                "SetPointUnits": "m/s",
-                "AllowableMin": -1.0,
-                "AllowableMax": 1.0,
-                "DataSourceUri": "/redfish/v1/Chassis/XAxisMover/Controls/EFFECTER_ID_5"
-            },
-            "Acceleration": {
-                "Reading": 0.0,
-                "SetPoint": 0.0,
-                "SetPointUnits": "m/s^2",
-                "AllowableMin": -10.0,
-                "AllowableMax": 10.0,
-                "DataSourceUri": "/redfish/v1/Chassis/XAxisMover/Controls/EFFECTER_ID_6"
-            }
-        }
+    "NodeControl": {
+        "SetPoint": 0.0503,
+        "SetPointUnits": "m",
+        "AllowableMin": 0,
+        "AllowableMax": 0.0600,
+        "DataSourceUri": "/redfish/v1/Chassis/XAxisMover/Controls/EFFECTER_ID_4"
     },
     "Actions": {
         "Oem": {}

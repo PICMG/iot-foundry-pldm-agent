@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pldm-mapping-wizard"
+version = "0.1.0"
+description = "Interactive tool for configuring PDR-to-Redfish mappings for IoT Foundry PLDM Agent"
+authors = [
+    {name = "IoT Foundry PLDM Agent", email = "contact@iotfoundry.example.com"}
+]
+requires-python = ">=3.10"
+dependencies = [
+    "click>=8.0.0",
+    "rich>=10.0.0",
+    "pyserial>=3.5",
+    "jsonschema>=4.0.0",
+    "pyyaml>=5.4.0",
+    "requests>=2.27.0",
+]
+
+[project.scripts]
+pldm-mapping-wizard = "pldm_mapping_wizard.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["pldm_mapping_wizard*"]
