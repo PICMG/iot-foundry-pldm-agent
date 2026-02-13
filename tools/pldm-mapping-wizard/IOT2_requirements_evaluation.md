@@ -63,6 +63,7 @@ Format: `<REQ #>` Requirement summary — PASS|FAIL|UNVERIFIABLE — Evidence or
 
 19. Writing SetPoint values to controls shall be reflected in the `PendingSetPoint` field until such time that the Control begins using the new SetPoint.
 	- Result: ERRATA — Runtime behavior; static mockups do not show `PendingSetPoint` updates.
+    - Resolution: The ERRATA will remove this requirement.  If readback is desired, operators may add another sensor that shows the operational value for the SetPoint, where the control SetPoint value will have standard behavior. 
 
 20. If node has pfinal (effecter ID 4) and position sensor (sensor ID 7), Control.Sensor for pfinal shall reference the position Sensor.
 	- Result: PASS
@@ -185,39 +186,55 @@ Format: `<REQ #>` Requirement summary — PASS|FAIL|UNVERIFIABLE — Evidence or
 
 55. When AutomationNode is `MotionPosition`, the top-level `Position` field shall be present.
 	- Result: ERRATA — `Position` appears under `Oem.PICMG.Position` in `AutomationInstrumentation`, not as a top-level `Position` field (ref file: samples/mockup/redfish/v1/AutomationNodes/XAxisMover/AutomationInstrumentation/index.json).
+    - Resoultion: When AutomationNode is `MotionPosition`, the top-level `NodeControl` field shall be present. 
 
 56. If `Position` field is present, its `DataSourceUri` shall reference Control for pfinal effecter.
 	- Result: ERRATA — Top-level `Position` absent; vendor `Oem` contains a DataSourceUri but it's under `Oem`.
+    - Resolution: When AutomationNode is `MotionPosition`, the `DataSourceUri` of the top level `NodeControl` shall reference Control for pfinal effecter.
 
 57. Changing `Position` shall behave as if associated Control modified directly.
-	- Result: UNVERIFIABLE
+	- Result: ERRATA
+    - Changing `SetPoint` field of the top-level `NodeControl` shall behave as if the associated Control was modified directly.
 
 58. When AutomationNode is `MotionPosition`/`MotionVelocity`, `Velocity` field shall be present (top-level).
 	- Result: ERRATA — `Velocity` only present under `Oem.PICMG` in mockup.
+    - Resoultion: When AutomationNode is `MotionVelocity`, the top-level `NodeControl` field shall be present.
 
 59. If `Velocity` present, its `DataSourceUri` shall reference vprofile effecter.
 	- Result: ERRATA — Present under `Oem` only; top-level `Velocity` missing.
+    - Resolution: When AutomationNode is `MotionVelocity`, the `DataSourceUri` of the top level `NodeControl` shall reference Control for vprofile effecter.
+    NOTE: The Control associated with the vprofile effecter may be accessed directly whether or not this field is present.
 
 60. Changing `Velocity` shall behave as if associated Control modified directly.
-	- Result: UNVERIFIABLE
+	- Result: ERRATA
+    - Resolution: Remove this requirement.  It is redundant
 
 61. When `MotionPosition`/`MotionVelocity`, `Acceleration` field shall be present (top-level).
 	- Result: ERRATA — `Acceleration` only present under `Oem.PICMG` in mockup.
+    - Resolution: Remove this requirement.
+    NOTE: The Control associated with the aprofile effecter may be accessed directly whether or not this field is present.  
 
 62. If `Acceleration` present, its `DataSourceUri` shall reference aprofile effecter.
 	- Result: ERRATA — Present under `Oem` only; top-level field missing.
+    - Resolution: Remove this requirement
 
 63. Changing `Acceleration` shall behave as if associated Control modified directly.
 	- Result: UNVERIFIABLE
+    - Resolution: Remove this requirement
 
 64. If node contains acceleration gain effecter, `AccelerationGain` field shall be present.
 	- Result: UNVERIFIABLE.
+    - Resolution: Remove this requirement.
+    NOTE: The Control associated with the aprofile effecter may be accessed directly whether or not this field is present.  
+
 
 65. If `AccelerationGain` present, its `DataSourceUri` shall reference AccelerationGain effecter.
-	- Result: UNVERIFIABLE.
-
+	- Result: ERRATA.
+    - Resolution: Remove this requirement.
+    
 66. Changing `AccelerationGain` shall behave as if associated Control modified directly.
-	- Result: UNVERIFIABLE
+	- Result: ERRATA.
+    - Resolution: Remove this requirement.
 
 67. When AutomationNode is `PID`, the `PID` field shall be present.
 	- Result: PASS.
@@ -226,7 +243,7 @@ Format: `<REQ #>` Requirement summary — PASS|FAIL|UNVERIFIABLE — Evidence or
 	- Result: PASS.
 
 69. Changing `PID` shall behave as if associated Control modified directly.
-	- Result: UNVERIFIABLE
+	- Result: PASS
 
 ## Insertion and Removal of IIoT.1 Nodes
 
