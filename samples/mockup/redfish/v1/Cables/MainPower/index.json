@@ -15,7 +15,7 @@
     "DCPower"
   ],
   "Links": {
-    "UpstreamChassis": [
+    "DownstreamChassis": [
       {
         "@odata.id": "/redfish/v1/Chassis/Aggregator"
       }

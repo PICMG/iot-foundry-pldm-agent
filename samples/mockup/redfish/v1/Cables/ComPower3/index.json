@@ -1,7 +1,7 @@
 {
   "@odata.type": "#Cable.v1_2_1.Cable",
   "Id": "ComPower3",
-  "Name": "Communication and Power Cable",
+  "Name": "AutomationNode Communication and Power Cable",
   "UpstreamName": "USB3",
   "DownstreamName": "J1",
   "Links": {

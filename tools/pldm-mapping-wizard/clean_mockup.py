@@ -123,10 +123,83 @@ def remove_target_references(obj: Any, target: str) -> Tuple[Any, int]:
     return obj, 0
 
 
+def oid_to_collection_and_id(oid: str) -> Tuple[str, str] | None:
+    """Convert an @odata.id like '/redfish/v1/Chassis/<id>' to (collection, id).
+
+    Returns None if the oid doesn't look like a Redfish resource under /redfish/v1.
+    """
+    if not isinstance(oid, str):
+        return None
+    oid = oid.rstrip('/')
+    parts = oid.split('/')
+    # Expect at least ['', 'redfish', 'v1', '<Collection>', '<Id>']
+    if len(parts) >= 5 and parts[1] == 'redfish' and parts[2] == 'v1':
+        collection = parts[3]
+        resource_id = parts[4]
+        return collection, resource_id
+    return None
+
+
+def delete_resource_by_oid(dst: Path, oid: str, report: dict, reason_key: str) -> bool:
+    """Delete a resource directory identified by @odata.id and remove references.
+
+    Returns True if a directory was deleted.
+    """
+    if not isinstance(oid, str):
+        return False
+    parts = oid.rstrip('/').split('/')
+    # Expect parts like ['', 'redfish', 'v1', ...resource path...]
+    try:
+        idx = parts.index('v1')
+    except ValueError:
+        return False
+    rel_parts = parts[idx + 1 :]
+    if not rel_parts:
+        return False
+    target_dir = dst / 'redfish' / 'v1'
+    for p in rel_parts:
+        target_dir = target_dir / p
+    if target_dir.exists():
+        try:
+            shutil.rmtree(target_dir)
+        except Exception:
+            return False
+        report.setdefault(reason_key, []).append(str(target_dir))
+
+        # Remove any references to this resource across the mockup
+        json_files = list(dst.rglob('*.json'))
+        for jf in json_files:
+            try:
+                data = load_json(jf)
+            except Exception:
+                continue
+            new_data, removed = remove_target_references(data, oid)
+            if removed:
+                write_json(jf, new_data)
+                rid = target_dir.name
+                report.setdefault(f'refs_removed_{rid}', []).append((str(jf), removed))
+        return True
+    return False
+
+
 def process_node(dest: Path, name: str, report: dict) -> None:
     base = dest / 'redfish' / 'v1'
     node_prefix = '/redfish/v1/AutomationNodes/' + name
-    chassis_prefix = '/redfish/v1/Chassis/' + name
+
+    # Determine chassis @odata.id(s) from the AutomationNode Links->Chassis
+    chassis_oids: list[str] = []
+    node_index = base / 'AutomationNodes' / name / 'index.json'
+    if node_index.exists():
+        try:
+            node_data = load_json(node_index)
+            links = node_data.get('Links', {})
+            chassis_links = links.get('Chassis', []) if isinstance(links, dict) else []
+            for c in chassis_links:
+                oid = c.get('@odata.id') if isinstance(c, dict) else None
+                if oid:
+                    chassis_oids.append(oid.rstrip('/'))
+        except Exception:
+            pass
 
     # Remove AutomationNodes/<name>
     node_dir = base / 'AutomationNodes' / name
@@ -134,39 +207,20 @@ def process_node(dest: Path, name: str, report: dict) -> None:
         shutil.rmtree(node_dir)
         report.setdefault('nodes_removed', []).append(str(node_dir))
 
-    # Remove Chassis/<name>
-    chassis_dir = base / 'Chassis' / name
-    if chassis_dir.exists():
-        shutil.rmtree(chassis_dir)
-        report.setdefault('chassis_removed', []).append(str(chassis_dir))
+    # Remove the chassis resources referenced by this AutomationNode (if any)
+    for chassis_oid in chassis_oids:
+        deleted = delete_resource_by_oid(dest, chassis_oid, report, 'chassis_removed')
+        if not deleted:
+            # fall back to removing by name if the referenced chassis dir exists
+            parsed = oid_to_collection_and_id(chassis_oid)
+            if parsed:
+                coll, rid = parsed
+                fallback_dir = base / coll / rid
+                if fallback_dir.exists():
+                    shutil.rmtree(fallback_dir)
+                    report.setdefault('chassis_removed', []).append(str(fallback_dir))
 
-    # Cables handling
-    cables_dir = base / 'Cables'
-    if cables_dir.exists():
-        for cable_idx in cables_dir.glob('*/index.json'):
-            try:
-                cable = load_json(cable_idx)
-            except Exception:
-                continue
-            links = cable.get('Links', {})
-            downstream = links.get('DownstreamChassis', []) if isinstance(links, dict) else []
-            # count downstream references that match this chassis
-            matching = [d for d in downstream if d.get('@odata.id') == chassis_prefix]
-            if matching:
-                if len(downstream) == 1:
-                    # delete the entire cable resource (file and parent dir)
-                    parent = cable_idx.parent
-                    shutil.rmtree(parent)
-                    report.setdefault('cables_deleted', []).append(str(parent))
-                else:
-                    # remove the matching downstream entries and write back
-                    new_down = [d for d in downstream if d.get('@odata.id') != chassis_prefix]
-                    links['DownstreamChassis'] = new_down
-                    cable['Links'] = links
-                    write_json(cable_idx, cable)
-                    report.setdefault('cables_modified', []).append(str(cable_idx))
-
-    # Remove references across all JSON files in dest
+    # Remove references to the removed AutomationNode and referenced Chassis OIDs across all JSON files in dest
     json_files = list(dest.rglob('*.json'))
     for jf in json_files:
         try:
@@ -177,10 +231,11 @@ def process_node(dest: Path, name: str, report: dict) -> None:
         if removed:
             write_json(jf, new_data)
             report.setdefault('refs_removed_node', []).append((str(jf), removed))
-        new_data2, removed2 = remove_target_references(new_data, chassis_prefix)
-        if removed2:
-            write_json(jf, new_data2)
-            report.setdefault('refs_removed_chassis', []).append((str(jf), removed2))
+        for chassis_oid in chassis_oids:
+            new_data2, removed2 = remove_target_references(new_data, chassis_oid)
+            if removed2:
+                write_json(jf, new_data2)
+                report.setdefault('refs_removed_chassis', []).append((str(jf), removed2))
 
     # Update collections counts (AutomationNodes, Chassis, Cables)
     for coll in [('AutomationNodes',), ('Chassis',), ('Cables',)]:
@@ -192,30 +247,23 @@ def process_node(dest: Path, name: str, report: dict) -> None:
 @click.command()
 @click.option('--source', '-s', default='samples/mockup', help='Source mockup folder')
 @click.option('--dest', '-d', default='output/mockup', help='Destination mockup folder')
-@click.option('--inplace/--no-inplace', default=False, help='Operate on existing dest without copying')
-def main(source: str, dest: str, inplace: bool):
+def main(source: str, dest: str):
     src = Path(source).expanduser()
     dst = Path(dest).expanduser()
-    if not src.exists() and not (inplace and dst.exists()):
-        click.echo(f'Source {src} does not exist and inplace not requested')
+    if not src.exists():
+        click.echo(f'Source {src} does not exist')
         raise click.Abort()
 
-    if inplace:
-        if not dst.exists():
-            click.echo(f'Destination {dst} does not exist for inplace operation')
-            raise click.Abort()
-        click.echo(f'Running inplace cleanup on {dst}')
-    else:
-        try:
-            dst = prompt_dest(dst)
-        except click.Abort:
-            click.echo('Cancelled')
-            return
+    try:
+        dst = prompt_dest(dst)
+    except click.Abort:
+        click.echo('Cancelled')
+        return
 
-        # Copy
-        click.echo(f'Copying {src} -> {dst} ...')
-        shutil.copytree(src, dst)
-        click.echo('Copy complete.')
+    # Copy
+    click.echo(f'Copying {src} -> {dst} ...')
+    shutil.copytree(src, dst)
+    click.echo('Copy complete.')
 
     report = {}
 
@@ -280,23 +328,73 @@ def main(source: str, dest: str, inplace: bool):
             existing_oids = [m.get('@odata.id') for m in data.get('Members', []) if isinstance(m, dict) and m.get('@odata.id')]
             discovered_oids = [f'/redfish/v1/{coll}/{name}' for name in discovered]
 
-            to_add = [o for o in discovered_oids if o not in existing_oids]
-            to_remove = [o for o in existing_oids if o not in discovered_oids]
-
-            if to_add or to_remove:
-                # build new members as discovered order, but keep any extra metadata if present
-                new_members = [{'@odata.id': o} for o in discovered_oids]
-                data['Members'] = new_members
-                data['Members@odata.count'] = len(new_members)
-                write_json(idx, data)
-                report.setdefault('collections_fixed', []).append({
-                    'collection': coll,
-                    'added': to_add,
-                    'removed': to_remove,
-                    'final_count': len(new_members)
-                })
+            # Always rewrite Members and count to reflect actual discovered resources
+            new_members = [{'@odata.id': o} for o in discovered_oids]
+            data['Members'] = new_members
+            data['Members@odata.count'] = len(new_members)
+            write_json(idx, data)
+            report.setdefault('collections_fixed', []).append({
+                'collection': coll,
+                'added': [o for o in discovered_oids if o not in existing_oids],
+                'removed': [o for o in existing_oids if o not in discovered_oids],
+                'final_count': len(new_members)
+            })
 
     fix_collections(dst, report)
+
+    # Additional cleanup passes per how_to.md
+    # 1) Remove cables that have no DownstreamChassis reference
+    cables_dir = dst / 'redfish' / 'v1' / 'Cables'
+    if cables_dir.exists():
+        for cable_idx in list(cables_dir.glob('*/index.json')):
+            try:
+                cable = load_json(cable_idx)
+            except Exception:
+                continue
+            links = cable.get('Links', {})
+            downstream = links.get('DownstreamChassis', []) if isinstance(links, dict) else []
+            if not downstream:
+                parent = cable_idx.parent
+                # Only remove cables that look like AutomationNode cables:
+                # (Cable resource `Name` contains the substring 'AutomationNode')
+                name_field = ''
+                try:
+                    name_field = str(cable.get('Name', '')) if isinstance(cable, dict) else ''
+                except Exception:
+                    name_field = ''
+                if 'AutomationNode' in name_field:
+                    # build oid for deletion so references are removed too
+                    oid = f"/redfish/v1/Cables/{parent.name}"
+                    deleted = delete_resource_by_oid(dst, oid, report, 'cables_deleted')
+                    if not deleted:
+                        try:
+                            shutil.rmtree(parent)
+                            report.setdefault('cables_deleted', []).append(str(parent))
+                        except Exception:
+                            pass
+
+    # 2) Remove any USBController with ID AutomationUsb under Systems
+    systems_dir = dst / 'redfish' / 'v1' / 'Systems'
+    if systems_dir.exists():
+        for system in systems_dir.iterdir():
+            if not system.is_dir():
+                continue
+            usb_controllers_dir = system / 'USBControllers'
+            auto_usb = usb_controllers_dir / 'AutomationUsb'
+            if auto_usb.exists():
+                # Try to delete via oid to remove references
+                system_id = system.name
+                oid = f"/redfish/v1/Systems/{system_id}/USBControllers/AutomationUsb"
+                deleted = delete_resource_by_oid(dst, oid, report, 'usbcontrollers_deleted')
+                if not deleted:
+                    try:
+                        shutil.rmtree(auto_usb)
+                        report.setdefault('usbcontrollers_deleted', []).append(str(auto_usb))
+                    except Exception:
+                        pass
+
+        # Re-run collection fixes after the additional deletion passes
+        fix_collections(dst, report)
 
     # Final residual check
     click.echo('Cleanup report:')

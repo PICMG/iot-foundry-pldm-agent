@@ -36,7 +36,7 @@ redfish
 - The contents of the `reference mockup` shall be copied into the `new mockup` folder.
 - For each `AutomationNode` resource that exists in the new mockup tree: Remove the `Chassis` resource associated with it.  The `Chassis` resource can be found from the `AutomationNode` resource's Links->Chassis navigation link.  When removing the `Chassis` object, its subfolder from the Chassis collection shall be removed and the `ChassisCollection` shall be updated.  In addition, any links to the removed `Chassis` resource within the entire resource tree shall be removed.
  - For each `AutomationNode` resource that exists in the `new mockup` tree: Remove the AutomationNode's associated folder, update the AutomationNode collection, and remove any links to the `AutomationNode` resource that may exist elsewhere in the `new mockup` resource tree.
- - For any `Cable` resources with no Links->DownstreamChassis reference, remove the cable and update the CableCollection.  Remove any links to the cable resource that may be found elsewhere in the `new mockup` resource tree.
+ - For any `Cable` resources with no Links->DownstreamChassis reference and include the text "AutomationNode" in the name, remove the cable and update the CableCollection.  Remove any links to the cable resource that may be found elsewhere in the `new mockup` resource tree.
  - For any `USBController` resource with an ID of `AutomationUsb`, delete the resource's folder within the resource tree and remove any links to the resource from the `new mockup` resource tree.
 
 # Step 2 - Preparation
@@ -130,7 +130,7 @@ Below is the template `AutomationNode`.  Double triangular braces identify areas
         "Health": "OK"
 	},
     "@odata.context": "/redfish/v1/$metadata#AutomationNode.AutomationNode",
-	"@odata.id": "/redfish/v1/AutomationNodes/<<resource_id>>",
+	"@odata.id": "/redfish/v1/AutomationNodes/<<resource_id>>"
 }
 ```
 
@@ -222,9 +222,8 @@ Throughout this section `sensor_pdr` refers to the Numeric Sensor PDR object for
   "Id": "<<sensor_id>>",
   "Name": "<<function from SENSOR_DATA Table (above) for appropriate sensor_id and entityIDName>> for <<short_name>>",
   "Description": "<<function from SENSOR_DATA Table (above) for appropriate sensor_id and entityIDName>> for <<short_name>>",
-  "SensorType": "Numeric",
   "Reading": null,
-  "ReadingUnits": <<convert from sensor_pdr fields using pdr_units_to_ucum function>>,
+  "ReadingUnits": "<<convert from sensor_pdr fields using pdr_units_to_ucum function>>",
   "ReadingAccuracy": <<compute from sensor_pdr fields as shown:  plusTolerance + maxReadable*accuracy/100 >>,
   "ReadingRangeMax": <<from sensor_pdr fields: maxReadable>>,
   "ReadingRangeMin": <<from sensor_pdr fields: minReadable>>,
@@ -280,21 +279,21 @@ Throughout this section `sensor_pdr` refers to the Numeric Sensor PDR object for
 }
 ```
 ### Step 3.3.2 Numeric Effecter (Control) Resources
-`Control` resources are created as members of the associated `Chassis` `Controls` collection.  Control `control_id` values shall follow the naming convention `CONTROL_ID_<n>` where `<n>` is the effecterId value in the associated Numeric Effecter PDR (`effecter_pdr`) in `pdrs`.
+`Control` resources are created as members of the associated `Chassis` `Controls` collection.  Control `control_id` values shall follow the naming convention `EFFECTER_ID_<n>` where `<n>` is the effecterId value in the associated Numeric Effecter PDR (`effecter_pdr`) in `pdrs`.
 
 The following data may be useful in constructing `Control` resources. The lookup condition for the CONTROL_DATA Table is the combined (`control_id`,`entityIDName`) pair.  *ANY* is a wildcard that means any value of `entityIDName` will match the condition.  Other columns give data values that will be used to fill out the template `Control` resource structure below when the condition is met. For every Numeric Effecter PDR that meets the condition in the table, a `Control` resource must be created, otherwise, no. 
 
 **CONTROL_DATA Table**
 | `control_id` | `entityIDName` | Function | Referenced `sensor_id` |
 |---|---|---|---|
-| CONTROL_ID_1  | *Any* | Global Interlock | SENSOR_ID_1 | 
-| CONTROL_ID_2  | *Any* | Trigger | SENSOR_ID_2 |
-| CONTROL_ID_3 - CONTROL_ID_255 | Simple | General Effecter |   
-| CONTROL_ID_4  | PID | SetPoint | SENSOR_ID_5 |
-| CONTROL_ID_4  | Position | Position | SENSOR_ID_7 | 
-| CONTROL_ID_5  | Position | Velocity Profile |
-| CONTROL_ID_6  | Position | Acceleration Profile |
-| CONTROL_ID_7  | Position | Acceleration Gain |
+| EFFECTER_ID_1  | *Any* | Global Interlock | SENSOR_ID_1 | 
+| EFFECTER_ID_2  | *Any* | Trigger | SENSOR_ID_2 |
+| EFFECTER_ID_3 - EFFECTER_ID_255 | Simple | General Effecter |   
+| EFFECTER_ID_4  | PID | SetPoint | SENSOR_ID_5 |
+| EFFECTER_ID_4  | Position | Position | SENSOR_ID_7 | 
+| EFFECTER_ID_5  | Position | Velocity Profile |
+| EFFECTER_ID_6  | Position | Acceleration Profile |
+| EFFECTER_ID_7  | Position | Acceleration Gain |
 
 The `Control` resource shall be created at `redfish/v1/Chassis/<<resource_id>>/Controls/<<control_id>>/index.json`.  The Chassis `Controls` collection at `redfish/v1/Chassis/<<resource_id>>/Controls/index.json` must be updated by appending the `Control` resource's `@odata.id` to the collection's `Members[]` and incrementing `Members@odata.count`.
 
@@ -317,7 +316,7 @@ Throughout this section `effecter_pdr` refers to the Numeric Effecter PDR object
     },
     "ControlMode": "Manual",
     "SetPoint": null,
-    "SetPointUnits": <<convert from pldm fields using pdr_units_to_ucum function>>,
+    "SetPointUnits": "<<convert from pldm fields using pdr_units_to_ucum function>>",
     "AllowableMax": <<value of maxSettable from effecter_pdr>>,
     "AllowableMin": <<value of minSettable from effecter_pdr>>,
     "SettingMax": <<value of maxSettable from effecter_pdr>>,
@@ -328,7 +327,7 @@ Throughout this section `effecter_pdr` refers to the Numeric Effecter PDR object
         "Reading": <<value of this field from the sensor within the same chassis with the referenced `sensor_id`>>,
         "DataSourceUri": "/redfish/v1/Chassis/<<resource_id>>/Sensors/<<Referenced `sensor_id`>>"
     },
-    <<include the following field only if the entityIDName is PID and this `control_id` corresponds to CONTROL_ID_4 >>
+    <<include the following field only if the entityIDName is PID and this `control_id` corresponds to EFFECTER_ID_4 >>
     "ControlLoop": {
         "Proportional": 0,
         "Integral": 0,
@@ -351,7 +350,7 @@ Fill placeholders marked by `<<...>>` programmatically and remove the triangular
     "@odata.id": "/redfish/v1/AutomationNodes/<<resource_id>>/AutomationInstrumentation",
     "Id": "AutomationInstrumentation",
     "Name": "Instrumentation for <<short_name>> AutomationNode",
-    "NodeState": "<<do not include this field when entityIDName is Simple, otherwise include it with a value of Idle>>",
+    "NodeState": "<<When entityIDName is Simple value is Running, otherwise value is Idle>>",
     "Status": {
         "State": "Enabled",
         "Health": "OK"
@@ -389,7 +388,7 @@ Fill placeholders marked by `<<...>>` programmatically and remove the triangular
 
 ```json
 {
-    "@odata.type": "Assembly.<<Extract most recent schema version from new mockup /redfish/v1/$metadata/index.xml (e.g. v1_27_0)>>.Assembly",
+    "@odata.type": "#Assembly.<<Extract most recent schema version from new mockup /redfish/v1/$metadata/index.xml (e.g. v1_27_0)>>.Assembly",
     "Id": "Assembly",
     "Name": "Assembly",
     "Description": "Assembly for <<short_name>>",
@@ -446,7 +445,7 @@ if no USB controller collection resource exists, a USB controller collection sha
 The usb controller shall be created at redfish/v1/Systems/<<automation_system>>/USBControllers/AutomationUsb and shall have a form of:
 ```json
 {
-    "@odata.type": "#USBController.v1_0_1.USBController",
+    "@odata.type": "#USBController.<<Extract most recent schema version from new mockup /redfish/v1/$metadata/index.xml (e.g. v1_27_0)>>.USBController",
     "Id": "USB1",
     "Name": "Automation USB Controller",
     "Ports": {
@@ -485,7 +484,7 @@ Note `cable_id` is the string "node_cable_" followed by a unique numeric identif
 
 ```json
 {
-  "@odata.type": "#Cable.<<most recent version from $ metadata>>.Cable",
+  "@odata.type": "#Cable.<<Extract most recent schema version from new mockup /redfish/v1/$metadata/index.xml (e.g. v1_27_0)>>.Cable",
   "Id": "<<cable_id>>",
   "Name": "AutomationNode cable for <<resource_id>>",
   "Links": {

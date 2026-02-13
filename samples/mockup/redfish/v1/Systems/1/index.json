@@ -14,10 +14,7 @@
                 {
                     "@odata.id": "/redfish/v1/Chassis/Aggregator"
                 }
-            ],
-        "USBControllers": {
-                "@odata.id": "/redfish/v1/Systems/1/USBControllers"
-            }
+            ]
     },
     "Actions": {
         "#ComputerSystem.Reset": {
