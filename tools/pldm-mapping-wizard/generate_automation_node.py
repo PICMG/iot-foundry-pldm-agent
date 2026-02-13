@@ -225,24 +225,112 @@ def create_automation_node(dst: Path, ep: dict, short_name: str, short_descripti
     if entityIDName in ('PID', 'Profiled'):
         desired = 'SetPoint' if entityIDName == 'PID' else 'Position'
         for eid in effecter_pdrs.keys():
-            func, _, _ = _control_function(eid, entityIDName)
+            func, _, _ = _control_function(eid, norm_entity)
             if func == desired:
                 links['OutputControl'] = {'@odata.id': f'/redfish/v1/Chassis/{resource_id}/Controls/EFFECTER_ID_{eid}'}
                 break
     # PidFeedbackSensor only for PID -> find sensor mapped to Feedback
     if entityIDName == 'PID':
         for sid in sensors_by_id.keys():
-            if _sensor_function(sid, entityIDName).lower().startswith('feedback'):
+            kind, _ = _sensor_function(sid, norm_entity)
+            if isinstance(kind, str) and kind.lower().startswith('feedback'):
                 links['PidFeedbackSensor'] = {'@odata.id': f'/redfish/v1/Chassis/{resource_id}/Sensors/SENSOR_ID_{sid}'}
                 break
     # PositionSensor only if Profiled and a Position sensor exists
     if entityIDName == 'Profiled':
         for sid in sensors_by_id.keys():
-            if _sensor_function(sid, entityIDName) == 'Position':
+            kind, _ = _sensor_function(sid, norm_entity)
+            if kind == 'Position':
                 links['PositionSensor'] = {'@odata.id': f'/redfish/v1/Chassis/{resource_id}/Sensors/SENSOR_ID_{sid}'}
                 break
 
     # update node Links
     node['Links'] = links
+
+    # rewrite the AutomationNode resource to include updated Links
+    _write_json(node_path, node)
+
+    # Step 3.4: create AutomationInstrumentation resource under the node
+    # Determine schema for AutomationInstrumentation
+    inst_schema = extract_schema_version(dst, 'AutomationInstrumentation')
+    inst = {
+        '@odata.type': (f"#AutomationInstrumentation.{inst_schema}.AutomationInstrumentation" if inst_schema else '#AutomationInstrumentation.AutomationInstrumentation'),
+        '@odata.context': '/redfish/v1/$metadata#AutomationInstrumentation.AutomationInstrumentation',
+        '@odata.id': f'/redfish/v1/AutomationNodes/{resource_id}/AutomationInstrumentation',
+        'Id': 'AutomationInstrumentation',
+        'Name': f'Instrumentation for {short_name} AutomationNode',
+        'NodeState': ('Running' if entityIDName == 'Simple' else 'Idle'),
+        'Status': {'State': 'Enabled', 'Health': 'OK'},
+        'Actions': {'Oem': {}}
+    }
+
+    # If an OutputControl link exists, include NodeControl (for non-PID) or PID (for PID)
+    out = links.get('OutputControl')
+    out_uri = None
+    if isinstance(out, dict):
+        out_uri = out.get('@odata.id')
+    elif isinstance(out, str):
+        out_uri = out
+
+    if out_uri:
+        # Map the URI to the control JSON file in the mockup tree and load it
+        # Expected format contains: /redfish/v1/Chassis/<resource_id>/Controls/EFFECTER_ID_<n>
+        parts = out_uri.strip('/').split('/')
+        ctrl_obj = None
+        try:
+            base = dst / 'redfish' / 'v1'
+            if 'Chassis' in parts:
+                ci = parts.index('Chassis')
+                # ensure there is chassis id and Controls/<ctrl_id> following
+                if len(parts) > ci + 3 and parts[ci + 2] == 'Controls':
+                    ch_id = parts[ci + 1]
+                    ctrl_id = parts[ci + 3]
+                    ctrl_path = base / 'Chassis' / ch_id / 'Controls' / ctrl_id / 'index.json'
+                    if ctrl_path.exists():
+                        import json as _json
+                        ctrl_obj = _json.loads(ctrl_path.read_text())
+        except Exception:
+            ctrl_obj = None
+
+        if ctrl_obj:
+            if entityIDName == 'PID':
+                # Build PID section from available fields in control resource
+                pid = {}
+                if 'SetPoint' in ctrl_obj:
+                    pid['SetPoint'] = ctrl_obj.get('SetPoint')
+                if 'SetPointUnits' in ctrl_obj:
+                    pid['SetPointUnits'] = ctrl_obj.get('SetPointUnits')
+                # Feedback: try to take Sensor.Reading from control resource if present
+                if 'Sensor' in ctrl_obj and isinstance(ctrl_obj.get('Sensor'), dict):
+                    s = ctrl_obj.get('Sensor', {})
+                    if 'Reading' in s:
+                        pid['Feedback'] = s.get('Reading')
+                # Error: not typically present on Control resource; include if present
+                if 'Error' in ctrl_obj:
+                    pid['Error'] = ctrl_obj.get('Error')
+                # LoopParameters: include ControlLoop object if present
+                if 'ControlLoop' in ctrl_obj:
+                    pid['LoopParameters'] = ctrl_obj.get('ControlLoop')
+                # DataSourceUri must match OutputControl link
+                pid['DataSourceUri'] = out_uri
+                inst['PID'] = pid
+            else:
+                nc = {}
+                if 'SetPoint' in ctrl_obj:
+                    nc['SetPoint'] = ctrl_obj.get('SetPoint')
+                if 'SetPointUnits' in ctrl_obj:
+                    nc['SetPointUnits'] = ctrl_obj.get('SetPointUnits')
+                if 'AllowableMin' in ctrl_obj:
+                    nc['AllowableMin'] = ctrl_obj.get('AllowableMin')
+                if 'AllowableMax' in ctrl_obj:
+                    nc['AllowableMax'] = ctrl_obj.get('AllowableMax')
+                nc['DataSourceUri'] = out_uri
+                inst['NodeControl'] = nc
+
+    # Write AutomationInstrumentation resource
+    base = dst / 'redfish' / 'v1'
+    inst_path = base / 'AutomationNodes' / resource_id / 'AutomationInstrumentation' / 'index.json'
+    _write_json(inst_path, inst)
+    report.setdefault('instrumentation_created', []).append(str(inst_path))
 
     return node['@odata.id']

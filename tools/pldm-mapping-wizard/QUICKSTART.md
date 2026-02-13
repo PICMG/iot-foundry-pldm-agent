@@ -30,6 +30,32 @@ This will:
 pldm-mapping-wizard validate --mappings pdr_redfish_mappings.json
 ```
 
+### Scan and Generate Mockup (one-step)
+
+You can automatically scan attached serial devices, collect PDR/FRU data, and generate
+a mockup under a destination folder in one command. By default the collector auto-selects
+all discovered devices.
+
+Run the end-to-end flow (auto-select devices):
+
+```bash
+python3 tools/pldm-mapping-wizard/pldm_mapping_wizard/cli.py scan-and-generate
+```
+
+Reuse a previously collected PDR/FRU JSON and only run generation:
+
+```bash
+python3 tools/pldm-mapping-wizard/pldm_mapping_wizard/cli.py scan-and-generate \
+   -c /tmp/pdr_and_fru_records.json \
+   -d /tmp/generated_mockup --no-auto-select
+```
+
+Options:
+- `-c/--collect-output`: path to collector JSON (default `/tmp/pdr_and_fru_records.json`)
+- `-s/--source-mockup`: reference mockup source (default `samples/mockup`)
+- `-d/--dest-mockup`: destination mockup folder
+- `--no-auto-select`: interactively choose devices instead of auto-selecting all
+
 ## Current Limitations (Phase 1)
 
 - PDR discovery not yet implemented (will fail to connect to real devices)

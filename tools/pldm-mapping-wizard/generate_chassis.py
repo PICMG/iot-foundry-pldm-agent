@@ -45,9 +45,13 @@ def _collect_fru_fields(ep: Optional[dict]) -> dict:
                         fields['Version'] = val
                     elif name in ('AssetTag', 'Asset Tag'):
                         fields['AssetTag'] = val
+                    elif name in ('EngineeringChangeLevel', 'ECL'):
+                        fields['EngineeringChangeLevel'] = val
+                    elif name == 'Vendor':
+                        fields['Vendor'] = val
     else:
         fru = ep.get('fru') if isinstance(ep.get('fru'), dict) else {}
-        for k in ('AssetTag', 'DateOfManufacture', 'SerialNumber', 'Manufacturer', 'Model', 'PartNumber', 'SKU', 'Version'):
+        for k in ('AssetTag', 'DateOfManufacture', 'SerialNumber', 'Manufacturer', 'Model', 'PartNumber', 'SKU', 'Version', 'Vendor', 'EngineeringChangeLevel'):
             if k in fru:
                 fields[k] = fru[k]
     return fields
@@ -118,6 +122,52 @@ def create_chassis(dst: Path, resource_id: str, short_name: str, description: st
             'Members@odata.count': 0
         }
         _write_json(controls_idx, cdata)
+
+    # Create Assembly resource if FRU/assembly data exists for this endpoint
+    if has_assembly:
+        asm_schema = extract_schema_version(dst, 'Assembly')
+        asm = {
+            '@odata.type': (f"#Assembly.{asm_schema}.Assembly" if asm_schema else '#Assembly.Assembly'),
+            'Id': 'Assembly',
+            'Name': 'Assembly',
+            'Description': f'Assembly for {short_name}',
+            '@odata.context': '/redfish/v1/$metadata#Assembly.Assembly',
+            '@odata.id': f'/redfish/v1/Chassis/{resource_id}/Assembly',
+            'Assemblies': []
+        }
+        # Populate the single Assemblies entry from collected FRU fields
+        if isinstance(ep, dict):
+            fru_fields = _collect_fru_fields(ep)
+            entry = {'Description': 'raw FRU data from AutomationNode'}
+            # Map FRU fields into Assembly template names per how_to.md
+            if 'EngineeringChangeLevel' in fru_fields:
+                entry['EngineeringChangeLevel'] = fru_fields['EngineeringChangeLevel']
+            if 'Model' in fru_fields:
+                entry['Model'] = fru_fields['Model']
+            if 'PartNumber' in fru_fields:
+                entry['PartNumber'] = fru_fields['PartNumber']
+            # Producer should come from Manufacturer
+            if 'Manufacturer' in fru_fields:
+                entry['Producer'] = fru_fields['Manufacturer']
+            if 'DateOfManufacture' in fru_fields:
+                entry['ProductionDate'] = fru_fields['DateOfManufacture']
+            if 'SKU' in fru_fields:
+                entry['SKU'] = fru_fields['SKU']
+            if 'SerialNumber' in fru_fields:
+                entry['SerialNumber'] = fru_fields['SerialNumber']
+            if 'Vendor' in fru_fields:
+                entry['Vendor'] = fru_fields['Vendor']
+            if 'Version' in fru_fields:
+                entry['Version'] = fru_fields['Version']
+            # BinaryDataURI uses raw_fru_data from the endpoint if present
+            raw = ep.get('raw_fru_data') if isinstance(ep, dict) else None
+            if raw:
+                entry['BinaryDataURI'] = raw
+            asm['Assemblies'].append(entry)
+        # Write assembly resource
+        asm_path = base / 'Chassis' / resource_id / 'Assembly' / 'index.json'
+        _write_json(asm_path, asm)
+        report.setdefault('assembly_created', []).append(str(asm_path))
 
     # Update top-level Chassis collection index
     top_idx = base / 'Chassis' / 'index.json'

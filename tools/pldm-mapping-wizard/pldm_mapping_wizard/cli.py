@@ -6,6 +6,9 @@ from pldm_mapping_wizard.redfish import SchemaLoader
 from pldm_mapping_wizard.discovery import PortMonitor
 from pldm_mapping_wizard.discovery.pdr_retriever import PDRRetriever
 from pldm_mapping_wizard.mapping import MappingAccumulator, DeviceMapping
+import subprocess
+import sys
+from pathlib import Path
 
 __version__ = "0.1.0"
 
@@ -234,6 +237,62 @@ def validate(mappings):
     """Validate existing PDR mappings against schemas."""
     console.print(f"\n[bold cyan]Validating mappings: {mappings}[/bold cyan]\n")
     console.print("   [yellow]⚠️  Not yet implemented[/yellow]\n")
+
+
+@cli.command('scan-and-generate')
+@click.option('--collect-output', '-c', type=click.Path(), default='/tmp/pdr_and_fru_records.json', help='Temporary output from device collection')
+@click.option('--source-mockup', '-s', type=click.Path(), default='samples/mockup', help='Reference mockup source')
+@click.option('--dest-mockup', '-d', type=click.Path(), default='output/generated_mockup', help='Destination mockup folder')
+@click.option('--auto-select/--no-auto-select', default=True, help='Auto-select discovered devices (non-interactive)')
+def scan_and_generate(collect_output: str, source_mockup: str, dest_mockup: str, auto_select: bool):
+    """Run device collection (front-end) then run the mockup generator (backend).
+
+    This command runs the serial device collector to produce a JSON file of PDRs/FRUs,
+    then invokes the `clean_mockup.py` generator using that file to create resources.
+    """
+    console.print('\n[bold cyan]Scan devices and generate mockup[/bold cyan]\n')
+
+    repo_root = Path(__file__).parents[3]
+    collector = repo_root / 'tools' / 'pldm-mapping-wizard' / 'collect_endpoints.py'
+    generator = repo_root / 'tools' / 'pldm-mapping-wizard' / 'clean_mockup.py'
+
+    if not collector.exists():
+        console.print(f"[red]Collector script not found: {collector}[/red]")
+        return
+    if not generator.exists():
+        console.print(f"[red]Generator script not found: {generator}[/red]")
+        return
+
+    collect_output_path = Path(collect_output).expanduser()
+
+    # Run collector (non-interactive if auto_select)
+    console.print(f"Running collector -> {collect_output_path}")
+    try:
+        if auto_select:
+            # pipe the word 'all' to the collector to auto-select discovered devices
+            subprocess.run("echo all | " + ' '.join([sys.executable, str(collector), '-o', str(collect_output_path)]), shell=True, check=True)
+        else:
+            subprocess.run([sys.executable, str(collector), '-o', str(collect_output_path)], check=True)
+    except subprocess.CalledProcessError as e:
+        console.print(f"[red]Collector failed: {e}[/red]")
+        return
+
+    console.print(f"Collector finished, saved to {collect_output_path}")
+
+    # Resolve source/dest relative to repository root when appropriate
+    source_path = Path(source_mockup)
+    if not source_path.is_absolute():
+        source_path = (repo_root / source_mockup).resolve()
+    dest_path = Path(dest_mockup).expanduser().resolve()
+
+    console.print(f"Running generator: clean_mockup -> dest={dest_path}")
+    try:
+        subprocess.run([sys.executable, str(generator), '-s', str(source_path), '-d', str(dest_path), '-p', str(collect_output_path)], check=True)
+    except subprocess.CalledProcessError as e:
+        console.print(f"[red]Generator failed: {e}[/red]")
+        return
+
+    console.print(f"\n[green]Mockup generation complete. Output at: {dest_mockup}[/green]\n")
 
 
 def main():
