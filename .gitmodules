@@ -7,3 +7,6 @@
 [submodule "subprojects/nlohmann-json"]
 	path = subprojects/nlohmann-json
 	url = https://github.com/nlohmann/json
+[submodule "tools/tools/Redfish-Mockup-Server"]
+	path = tools/tools/Redfish-Mockup-Server
+	url = https://github.com/DMTF/Redfish-Mockup-Server
