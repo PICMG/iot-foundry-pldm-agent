@@ -29,6 +29,9 @@ import click
 from pathlib import Path
 from typing import Any, Tuple
 
+import generate_automation_node
+from utils import extract_schema_version
+
 
 def load_json(path: Path) -> Any:
     with open(path, 'r') as f:
@@ -49,7 +52,6 @@ def prompt_dest(dest: Path) -> Path:
         choice = choice.strip().lower()
         if choice in ('r', 'remove'):
             shutil.rmtree(dest)
-            click.echo(f'Removed {dest}')
             return dest
         if choice in ('c', 'choose'):
             new = click.prompt('Enter new destination path')
@@ -163,6 +165,10 @@ def delete_resource_by_oid(dst: Path, oid: str, report: dict, reason_key: str) -
         try:
             shutil.rmtree(target_dir)
         except Exception:
+            import traceback
+            err = traceback.format_exc()
+            report.setdefault('errors', []).append(f'delete_rmtree_failed:{target_dir}:{err}')
+            click.echo(f'Error deleting {target_dir}: {err}', err=True)
             return False
         report.setdefault(reason_key, []).append(str(target_dir))
 
@@ -172,6 +178,9 @@ def delete_resource_by_oid(dst: Path, oid: str, report: dict, reason_key: str) -
             try:
                 data = load_json(jf)
             except Exception:
+                import traceback
+                report.setdefault('errors', []).append(f'load_json_failed:{jf}:{traceback.format_exc()}')
+                click.echo(f'Error loading JSON {jf}', err=True)
                 continue
             new_data, removed = remove_target_references(data, oid)
             if removed:
@@ -226,6 +235,9 @@ def process_node(dest: Path, name: str, report: dict) -> None:
         try:
             data = load_json(jf)
         except Exception:
+            import traceback
+            report.setdefault('errors', []).append(f'load_json_failed:{jf}:{traceback.format_exc()}')
+            click.echo(f'Error loading JSON {jf}', err=True)
             continue
         new_data, removed = remove_target_references(data, node_prefix)
         if removed:
@@ -247,7 +259,8 @@ def process_node(dest: Path, name: str, report: dict) -> None:
 @click.command()
 @click.option('--source', '-s', default='samples/mockup', help='Source mockup folder')
 @click.option('--dest', '-d', default='output/mockup', help='Destination mockup folder')
-def main(source: str, dest: str):
+@click.option('--pdr-file', '-p', default=None, help='Path to pdr_file JSON for resource generation')
+def main(source: str, dest: str, pdr_file: str | None):
     src = Path(source).expanduser()
     dst = Path(dest).expanduser()
     if not src.exists():
@@ -261,11 +274,123 @@ def main(source: str, dest: str):
         return
 
     # Copy
-    click.echo(f'Copying {src} -> {dst} ...')
-    shutil.copytree(src, dst)
-    click.echo('Copy complete.')
+    try:
+        shutil.copytree(src, dst)
+    except Exception as e:
+        click.echo(f'Error copying {src} -> {dst}: {e}', err=True)
+        raise click.Abort()
 
     report = {}
+
+    # --- Preparation phase (Step 2 in how_to.md) ---
+    def ensure_collection_exists(dst_path: Path, coll: str, odata_type: str):
+        coll_dir = dst_path / 'redfish' / 'v1' / coll
+        idx = coll_dir / 'index.json'
+        if not coll_dir.exists():
+            coll_dir.mkdir(parents=True, exist_ok=True)
+        if not idx.exists():
+            data = {
+                '@odata.id': f'/redfish/v1/{coll}',
+                '@odata.type': odata_type,
+                'Members': [],
+                'Members@odata.count': 0
+            }
+            write_json(idx, data)
+            report.setdefault('preparation', []).append({'collection_created': coll})
+
+    def pick_resource_from_collection(dst_path: Path, coll: str, kind: str) -> str | None:
+        idx = dst_path / 'redfish' / 'v1' / coll / 'index.json'
+        if not idx.exists():
+            return None
+        data = load_json(idx)
+        members = [m.get('@odata.id') for m in data.get('Members', []) if isinstance(m, dict) and m.get('@odata.id')]
+        if not members:
+            return None
+        if len(members) == 1:
+            return members[0]
+        # multiple: prompt user to select
+        click.echo(f'Multiple {coll} resources found; select {kind}:')
+        for i, m in enumerate(members, start=1):
+            click.echo(f'{i}) {m}')
+        while True:
+            choice = click.prompt(f'Enter number for the {kind} (1-{len(members)})')
+            try:
+                n = int(choice)
+                if 1 <= n <= len(members):
+                    return members[n-1]
+            except Exception:
+                pass
+            click.echo('Invalid choice; try again')
+
+    # Ensure Systems collection exists and select automation_system
+    while True:
+        systems_idx = dst / 'redfish' / 'v1' / 'Systems' / 'index.json'
+        if systems_idx.exists():
+            automation_system = pick_resource_from_collection(dst, 'Systems', 'automation_system')
+            if automation_system is None:
+                click.echo('No System resources found in Systems collection.')
+                # allow user to pick alternate reference mockup or exit
+                alt = click.prompt('Specify alternate reference mockup path or (x) to exit', default='x')
+                if alt.strip().lower() == 'x':
+                    raise click.Abort()
+                altp = Path(alt).expanduser()
+                if not altp.exists():
+                    click.echo(f'Path {altp} does not exist; exiting')
+                    raise click.Abort()
+                # replace dst with copy of new source
+                shutil.rmtree(dst)
+                shutil.copytree(altp, dst)
+                continue
+            break
+        # systems collection missing
+        click.echo('No top-level Systems collection found in mockup.')
+        alt = click.prompt('Specify alternate reference mockup path or (x) to exit', default='x')
+        if alt.strip().lower() == 'x':
+            raise click.Abort()
+        altp = Path(alt).expanduser()
+        if not altp.exists():
+            click.echo(f'Path {altp} does not exist; exiting')
+            raise click.Abort()
+        shutil.rmtree(dst)
+        shutil.copytree(altp, dst)
+
+    report.setdefault('preparation', []).append({'automation_system': automation_system})
+
+    # Ensure Managers collection exists and select automation_manager
+    while True:
+        managers_idx = dst / 'redfish' / 'v1' / 'Managers' / 'index.json'
+        if managers_idx.exists():
+            automation_manager = pick_resource_from_collection(dst, 'Managers', 'automation_manager')
+            if automation_manager is None:
+                click.echo('No Manager resources found in Managers collection.')
+                alt = click.prompt('Specify alternate reference mockup path or (x) to exit', default='x')
+                if alt.strip().lower() == 'x':
+                    raise click.Abort()
+                altp = Path(alt).expanduser()
+                if not altp.exists():
+                    click.echo(f'Path {altp} does not exist; exiting')
+                    raise click.Abort()
+                shutil.rmtree(dst)
+                shutil.copytree(altp, dst)
+                continue
+            break
+        click.echo('No top-level Managers collection found in mockup.')
+        alt = click.prompt('Specify alternate reference mockup path or (x) to exit', default='x')
+        if alt.strip().lower() == 'x':
+            raise click.Abort()
+        altp = Path(alt).expanduser()
+        if not altp.exists():
+            click.echo(f'Path {altp} does not exist; exiting')
+            raise click.Abort()
+        shutil.rmtree(dst)
+        shutil.copytree(altp, dst)
+
+    report.setdefault('preparation', []).append({'automation_manager': automation_manager})
+
+    # Ensure Cables and AutomationNodes collections exist
+    ensure_collection_exists(dst, 'Cables', '#CableCollection.CableCollection')
+    ensure_collection_exists(dst, 'AutomationNodes', '#AutomationNodeCollection.AutomationNodeCollection')
+
 
     # Scan AutomationNodes collection
     automation_index = dst / 'redfish' / 'v1' / 'AutomationNodes' / 'index.json'
@@ -285,10 +410,7 @@ def main(source: str, dest: str):
             if parts:
                 node_names.append(parts[-1])
 
-    click.echo(f'Found AutomationNodes: {node_names}')
-
     for name in node_names:
-        click.echo(f'Processing node {name} ...')
         process_node(dst, name, report)
 
     # Fix collections: remove only missing resources from collection members and decrement counts
@@ -394,12 +516,104 @@ def main(source: str, dest: str):
                         pass
 
         # Re-run collection fixes after the additional deletion passes
-        fix_collections(dst, report)
+            fix_collections(dst, report)
 
-    # Final residual check
-    click.echo('Cleanup report:')
-    click.echo(json.dumps(report, indent=2))
-    click.echo('Done.')
+        # Note: cleanup report is recorded in `report`; only surface errors to the user
+        if 'errors' in report:
+            click.echo('Errors during cleanup:', err=True)
+            for e in report.get('errors', []):
+                click.echo(str(e), err=True)
+
+    # --- Resource Generation (Step 3, including 3.1 and 3.2) ---
+    if pdr_file:
+        pdr_path = Path(pdr_file).expanduser()
+        if not pdr_path.exists():
+            click.echo(f'PDR file {pdr_path} does not exist; skipping resource generation')
+        else:
+            try:
+                pdr_data = load_json(pdr_path)
+            except Exception:
+                click.echo(f'Failed to load PDR file {pdr_path}; skipping generation')
+                pdr_data = None
+
+            endpoints = []
+            if isinstance(pdr_data, dict):
+                for key in ('endpoints', 'pdrs', 'devices'):
+                    if key in pdr_data and isinstance(pdr_data[key], list):
+                        endpoints = pdr_data[key]
+                        break
+                if not endpoints:
+                    # if top-level dict contains numeric-indexed map, try values
+                    vals = [v for v in pdr_data.values() if isinstance(v, dict) or isinstance(v, list)]
+                    # no reliable fallback — try root list
+            if isinstance(pdr_data, list):
+                endpoints = pdr_data
+
+            if not endpoints:
+                click.echo('No endpoints found in pdr_file; skipping generation')
+            else:
+                for ep in endpoints:
+                    # Extract entityIDName from endpoint
+                    entityIDName = None
+                    devpath = None
+                    model = None
+                    serial = None
+                    if isinstance(ep, dict):
+                        # common locations
+                        devpath = ep.get('dev') or ep.get('device')
+                        model = ep.get('fru', {}).get('Model') if isinstance(ep.get('fru'), dict) else ep.get('Model')
+                        serial = ep.get('fru', {}).get('SerialNumber') if isinstance(ep.get('fru'), dict) else ep.get('SerialNumber')
+                        # search for entityIDName
+                        if 'entityIDName' in ep:
+                            entityIDName = ep.get('entityIDName')
+                        else:
+                            # maybe inside entityNames or pdr list
+                            en = ep.get('entityNames')
+                            if isinstance(en, dict):
+                                # try OEM Entity ID PDR key
+                                for k, v in en.items():
+                                    if isinstance(v, dict) and 'entityIDName' in v:
+                                        entityIDName = v.get('entityIDName')
+                                        break
+                            # fallback: search nested for entityIDName
+                            if entityIDName is None:
+                                def find_entity(x):
+                                    if isinstance(x, dict):
+                                        if 'entityIDName' in x:
+                                            return x.get('entityIDName')
+                                        for vv in x.values():
+                                            r = find_entity(vv)
+                                            if r:
+                                                return r
+                                    if isinstance(x, list):
+                                        for vv in x:
+                                            r = find_entity(vv)
+                                            if r:
+                                                return r
+                                    return None
+                                entityIDName = find_entity(ep)
+
+                    if not entityIDName:
+                        click.echo('Endpoint missing entityIDName; skipping this endpoint')
+                        continue
+
+                    click.echo('\nEndpoint:')
+                    click.echo(f'  device: {devpath}')
+                    click.echo(f'  entityIDName: {entityIDName}')
+                    click.echo(f'  Model: {model}')
+                    click.echo(f'  Serial: {serial}')
+
+                    # Prompt user for short_name and description as specified in how_to.md
+                    short_name = click.prompt('short_name (e.g. XMover)')
+                    short_description = click.prompt('short_description', default=f'Automation node for {short_name}')
+
+                    try:
+                        oid = generate_automation_node.create_automation_node(dst, ep, short_name, short_description, report, report.get('preparation', [{}])[-1].get('automation_manager', ''))
+                        click.echo(f'Created AutomationNode {oid}')
+                    except Exception as e:
+                        click.echo(f'Failed to create AutomationNode: {e}')
+                        continue
+
 
 
 if __name__ == '__main__':

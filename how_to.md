@@ -192,19 +192,19 @@ Below is the template `Chassis` resource.  Double triangular braces identify are
 The following data may be useful in constructing `Sensor` resources. The lookup condition for the SENSOR_DATA Table is the combined (`sensor_id`, `entityIDName`) pair. *ANY* is a wildcard that means any value of `entityIDName` will match the condition. Other columns give data values that will be used to fill out the template Sensor resource structure below when the condition is met. For every Numeric Sensor PDR that meets the conditions in the table, a `Sensor` resource must be createed, otherwise, no. 
 
 **SENSOR_DATA Table**
-| `sensor_id` | `entityIDName` | Function |
-|---|---|---| 
-| SENSOR_ID_1  | *Any* | Global Interlock |
-| SENSOR_ID_2  | *Any* | Trigger |
-| SENSOR_ID_3 - SENSOR_ID_255 | Simple | General Sensor |   
-| SENSOR_ID_4  | PID | Control Error |
-| SENSOR_ID_5  | PID | Feedback |
-| SENSOR_ID_4  | Position | Velocity Error | 
-| SENSOR_ID_5  | Position | Position Error |
-| SENSOR_ID_6  | Position | Velocity |
-| SENSOR_ID_7  | Position | Position |
-| SENSOR_ID_8  | Position | Positive Limit |
-| SENSOR_ID_9  | Position | Negative Limit |
+| `sensor_id` | `entityIDName` | Function | make percent |
+|---|---|---|---|
+| SENSOR_ID_1  | *Any* | Global Interlock | true |
+| SENSOR_ID_2  | *Any* | Trigger | true |
+| SENSOR_ID_3 - SENSOR_ID_255 | Simple | General Sensor | false |   
+| SENSOR_ID_4  | PID | Control Error | false |
+| SENSOR_ID_5  | PID | Feedback | false |
+| SENSOR_ID_4  | Profiled | Velocity Error | false | 
+| SENSOR_ID_5  | Profiled | Position Error | false |
+| SENSOR_ID_6  | Profiled | Velocity | false |
+| SENSOR_ID_7  | Profiled | Position | false |
+| SENSOR_ID_8  | Profiled | Positive Limit | true |
+| SENSOR_ID_9  | Profiled | Negative Limit | true |
 
 The `Sensor` resource shall be created at `redfish/v1/Chassis/<<resource_id>>/Sensors/<<sensor_id>>/index.json`.  The Chassis `Sensors` collection at `redfish/v1/Chassis/<<resource_id>>/Sensors/index.json` must be updated by appending the `Sensor` resource's `@odata.id` to the collection's `Members[]` and incrementing `Members@odata.count`.
 
@@ -232,39 +232,39 @@ Throughout this section `sensor_pdr` refers to the Numeric Sensor PDR object for
     "State": "Enabled",
     "Health": "OK"
   },
-    <<If the sensor_pdr has the bitfield supportedThresholds <> 0, include the following field>>
+    <<If the sensor_pdr has the bitfield rangeFieldSupportFlags <> 0, include the following field>>
     "Thresholds": {
-        <<If the sensor_pdr supportedThresholdsFlags->LowerThresholdWarning is true, include the following field>>
+        <<If the sensor_pdr rangeFieldSupportFlags->normalMinSupported is true, include the following field>>
         "LowerCaution": {
             "Reading": <<value from sensor_pdr for warningLow>>,
             "Activation": "Disabled",
             "HysteresisReading": <<compute from the sensor_pdr values: hysteresis>>
         },
-        <<If the sensor_pdr supportedThresholdsFlags->LowerThresholdCritical is true, include the following field>>
+        <<If the sensor_pdr rangeFieldSupportFlags->criticalLowSupported is true, include the following field>>
         "LowerCritical": {
             "Reading": <<value from sensor_pdr for criticalLow>>,
             "Activation": "Disabled",
             "HysteresisReading": <<compute from the sensor_pdr values: hysteresis>>
         },
-        <<If the sensor_pdr supportedThresholdsFlags->LowerThresholdFatal is true, include the following field>>
+        <<If the sensor_pdr rangeFieldSupportFlags->fatalLowSupported is true, include the following field>>
         "LowerFatal": {
                 "Reading": <<value from sensor_pdr for fatalLow>>,
                 "Activation": "Disabled",
                 "HysteresisReading": <<compute from the sensor_pdr values: hysteresis>>
         },
-        <<If sensor_pdr supportedThresholdsFlags->UpperThresholdWarning is true, include the following field>>
+        <<If sensor_pdr rangeFieldSupportFlags->normalMaxSupported is true, include the following field>>
         "UpperCaution": {
                 "Reading": <<value from sensor_pdr for warningHigh>>,
                 "Activation": "Disabled",
                 "HysteresisReading": <<compute from the sensor_pdr values: hysteresis>>
         },
-        <<If sensor_pdr supportedThresholdsFlags->UpperThresholdCritical is true, include the following field>>
+        <<If sensor_pdr rangeFieldSupportFlags->criticalHighSupported is true, include the following field>>
         "UpperCritical": {
                 "Reading": <<value from sensor_pdr for criticalHigh>>,
                 "Activation": "Disabled",
                 "HysteresisReading": <<compute from the sensor_pdr values: hysteresis>>
         },
-        <<If sensor_pdr supportedThresholdsFlags->UpperThresholdFatal is true, include the following field>>
+        <<If sensor_pdr rangeFieldSupportFlags->fatalHighSupported is true, include the following field>>
         "UpperFatal": {
                 "Reading": <<value from sensor_pdr for fatalHigh>>,
                 "Activation": "Disabled",
@@ -284,16 +284,16 @@ Throughout this section `sensor_pdr` refers to the Numeric Sensor PDR object for
 The following data may be useful in constructing `Control` resources. The lookup condition for the CONTROL_DATA Table is the combined (`control_id`,`entityIDName`) pair.  *ANY* is a wildcard that means any value of `entityIDName` will match the condition.  Other columns give data values that will be used to fill out the template `Control` resource structure below when the condition is met. For every Numeric Effecter PDR that meets the condition in the table, a `Control` resource must be created, otherwise, no. 
 
 **CONTROL_DATA Table**
-| `control_id` | `entityIDName` | Function | Referenced `sensor_id` |
-|---|---|---|---|
-| EFFECTER_ID_1  | *Any* | Global Interlock | SENSOR_ID_1 | 
-| EFFECTER_ID_2  | *Any* | Trigger | SENSOR_ID_2 |
-| EFFECTER_ID_3 - EFFECTER_ID_255 | Simple | General Effecter |   
-| EFFECTER_ID_4  | PID | SetPoint | SENSOR_ID_5 |
-| EFFECTER_ID_4  | Position | Position | SENSOR_ID_7 | 
-| EFFECTER_ID_5  | Position | Velocity Profile |
-| EFFECTER_ID_6  | Position | Acceleration Profile |
-| EFFECTER_ID_7  | Position | Acceleration Gain |
+| `control_id` | `entityIDName` | Function | Referenced `sensor_id` | make_percent |
+|---|---|---|---|---|
+| EFFECTER_ID_1  | *Any* | Global Interlock | SENSOR_ID_1 | true |
+| EFFECTER_ID_2  | *Any* | Trigger | SENSOR_ID_2 | true |
+| EFFECTER_ID_3 - EFFECTER_ID_255 | Simple | General Effecter | false |   
+| EFFECTER_ID_4  | PID | SetPoint | SENSOR_ID_5 | false |
+| EFFECTER_ID_4  | Profiled | Position | SENSOR_ID_7 | false |
+| EFFECTER_ID_5  | Profiled | Velocity Profile | false |
+| EFFECTER_ID_6  | Profiled | Acceleration Profile | false |
+| EFFECTER_ID_7  | Profiled | Acceleration Gain | false |
 
 The `Control` resource shall be created at `redfish/v1/Chassis/<<resource_id>>/Controls/<<control_id>>/index.json`.  The Chassis `Controls` collection at `redfish/v1/Chassis/<<resource_id>>/Controls/index.json` must be updated by appending the `Control` resource's `@odata.id` to the collection's `Members[]` and incrementing `Members@odata.count`.
 

@@ -96,6 +96,19 @@ PLDM_SENSOR_UNITS = [
     {"code": 255, "name": "OEMUnit",             "numerators": [],    "denominators": [], "modifier": 0},
 ]
 
+PLDM_RATE_UNITS = [
+    {"code": 0,   "name": "None",                "numerators": [],        "denominators": [], "modifier": 0},
+    {"code": 1,   "name": "Per MicroSecond",         "numerators": [],        "denominators": ['s'], "modifier": 6},
+    {"code": 2,   "name": "Per MilliSecond",           "numerators": [],   "denominators": ['s'], "modifier": 3},
+    {"code": 3,   "name": "Per Second",           "numerators": [],  "denominators": ['s'], "modifier": 0},
+    {"code": 4,   "name": "Per Minute",             "numerators": [],     "denominators": ['min'], "modifier": 0},
+    {"code": 5,   "name": "Per Hour",               "numerators": [],     "denominators": ['h'], "modifier": 0},
+    {"code": 6,   "name": "Per Day",                "numerators": [],     "denominators": ['d'], "modifier": 0},
+    {"code": 7,   "name": "Per Week",               "numerators": [],     "denominators": ['wk'], "modifier": 0},
+    {"code": 8,   "name": "Per Month",              "numerators": [],     "denominators": ['mo'], "modifier": 0},
+    {"code": 9,   "name": "Per Year",            "numerators": [],     "denominators": ['a'], "modifier": 0},
+]
+
 from collections import Counter
 
 Power_Modifier_String = [
@@ -132,6 +145,21 @@ def pldm_unit_to_ucum(unit_code):
         numerators, denominators, modifier
     """
     for unit in PLDM_SENSOR_UNITS:
+        if unit["code"] == unit_code:
+            return unit["numerators"], unit["denominators"], unit["modifier"]
+    return None, None, None
+
+def pldm_rate_to_ucum(unit_code):
+    """
+    Convert a PLDM rate code to a UCUM string tuple.
+
+    Args:
+        unit_code (int): The PLDM rate code to convert.
+
+    Returns:
+        numerators, denominators, modifier
+    """
+    for unit in PLDM_RATE_UNITS:
         if unit["code"] == unit_code:
             return unit["numerators"], unit["denominators"], unit["modifier"]
     return None, None, None
@@ -275,14 +303,14 @@ def pdr_units_to_ucum(base, base_power, aux, aux_power, rel, rate, aux_rate):
             denominators.extend(aux_numerators)
             modifier_power -= (aux_modifier + aux_power)
     if rate != 0:
-        rate_numerators, rate_denominators, rate_modifier = pldm_unit_to_ucum(rate)
-        numerators.extend(rate_denominators)
-        denominators.extend(rate_numerators)
+        rate_numerators, rate_denominators, rate_modifier = pldm_rate_to_ucum(rate)
+        numerators.extend(rate_numerators)
+        denominators.extend(rate_denominators)
         modifier_power -= rate_modifier
     if aux_rate != 0:
-        aux_rate_numerators, aux_rate_denominators, aux_rate_modifier = pldm_unit_to_ucum(aux_rate)
-        numerators.extend(aux_rate_denominators)
-        denominators.extend(aux_rate_numerators)
+        aux_rate_numerators, aux_rate_denominators, aux_rate_modifier = pldm_rate_to_ucum(aux_rate)
+        numerators.extend(aux_rate_numerators)
+        denominators.extend(aux_rate_denominators)
         modifier_power -= aux_rate_modifier
 
     return pldm_unit_to_ucum_string(numerators, denominators, modifier_power)
