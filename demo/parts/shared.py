@@ -24,7 +24,11 @@ class ConfigManager:
         
     def load(self) -> ConfigParser:
         """Load and interpolate config file."""
-        self.config.read(self.config_path)
+        try:
+            self.config.read(self.config_path)
+        except Exception as e:
+            print(f"ERROR reading config: {e}")
+            raise
         
         # Add default interpolation values (DEFAULT section always exists in ConfigParser)
         self.config.set('DEFAULT', 'REPO_ROOT', str(self.repo_root))
@@ -36,8 +40,11 @@ class ConfigManager:
         """Get config value with fallback."""
         try:
             return self.config.get(section, key)
-        except Exception:
-            return fallback if fallback else ""
+        except Exception as e:
+            if fallback:
+                return fallback
+            # Last resort: return empty string
+            return ""
     
     def getint(self, section: str, key: str, fallback: int = 0) -> int:
         """Get integer config value."""
@@ -63,9 +70,10 @@ class LogManager:
         self.logger = logging.getLogger(name)
         self.logger.setLevel(getattr(logging, level.upper(), logging.INFO))
         
-        # File handler
+        # File handler with immediate flush
         fh = logging.FileHandler(self.log_dir / f"{name}.log")
         fh.setLevel(logging.DEBUG)
+        fh.flush()  # Ensure writes are flushed immediately
         
         # Console handler
         ch = logging.StreamHandler(sys.stdout)
@@ -81,6 +89,18 @@ class LogManager:
         
         self.logger.addHandler(fh)
         self.logger.addHandler(ch)
+        
+        # Force flush after each log write
+        for handler in self.logger.handlers:
+            handler.addFilter(self._flush_filter(handler))
+    
+    def _flush_filter(self, handler):
+        """Create a filter that flushes the handler."""
+        class FlushFilter(logging.Filter):
+            def filter(self, record):
+                handler.flush()
+                return True
+        return FlushFilter()
     
     def get_logger(self) -> logging.Logger:
         """Get configured logger."""
