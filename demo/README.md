@@ -153,29 +153,3 @@ port = 8001
 ./start.sh → "5) Stop All" → Ctrl+C menu → Run again
 ```
 
-## Development
-
-To modify a part (e.g., extend the Runtime Agent):
-
-1. Edit the relevant file in `parts/`
-2. Changes take effect on next run (venv already has dependencies)
-3. Check `logs/` for output and errors
-
-Example: Adding custom agent logic
-```python
-# In parts/runtime_agent.py, inside run_agent()
-# Add your monitoring/control code in the while loop
-```
-
-## Next Steps
-
-1. ✅ Run `./setup.sh` to initialize
-2. ✅ Run `./start.sh` and explore the menu
-3. ✅ Scan devices via Configurator
-4. ✅ Start the Redfish Mockup Server
-5. ✅ Access mockup at `http://127.0.0.1:8000/redfish/v1`
-6. ✅ Extend Runtime Agent with custom logic
-
----
-
-For more information, see the main [README.md](../README.md) in the repository root.

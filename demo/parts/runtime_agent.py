@@ -26,15 +26,15 @@ class FRUMatcher:
     def _load_export_module(self):
         """Dynamically load export_pdrs_to_json module for FRU retrieval."""
         try:
-            repo_root = Path(__file__).parents[2]
-            export_path = repo_root / 'tools' / 'pldm-mapping-wizard' / 'export_pdrs_to_json.py'
+            demo_root = Path(__file__).parents[1]
+            export_path = demo_root / 'pldm_tools' / 'export_pdrs_to_json.py'
             
             if not export_path.exists():
                 self.logger.error(f"Export module not found: {export_path}")
                 return None
             
-            # Add pldm-mapping-wizard to path BEFORE importing
-            pldm_tools_dir = str(repo_root / 'tools' / 'pldm-mapping-wizard')
+            # Add pldm_tools to path BEFORE importing
+            pldm_tools_dir = str(demo_root / 'pldm_tools')
             if pldm_tools_dir not in sys.path:
                 sys.path.insert(0, pldm_tools_dir)
             

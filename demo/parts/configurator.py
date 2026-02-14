@@ -85,8 +85,8 @@ def run_configurator(config: ConfigManager, logger):
     logger.info("Starting configurator (scan + generate mockup)...")
     
     # Paths
-    repo_root = Path(__file__).parents[2]
-    cli_script = repo_root / 'tools' / 'pldm-mapping-wizard' / 'pldm_mapping_wizard' / 'cli.py'
+    demo_root = Path(__file__).parents[1]
+    cli_script = demo_root / 'pldm_tools' / 'pldm_mapping_wizard' / 'cli.py'
     
     if not cli_script.exists():
         logger.error(f"CLI script not found: {cli_script}")
@@ -120,10 +120,10 @@ def run_configurator(config: ConfigManager, logger):
     try:
         # Set up environment with PYTHONPATH to find pldm_mapping_wizard module
         env = os.environ.copy()
-        tools_dir = repo_root / 'tools' / 'pldm-mapping-wizard'
+        tools_dir = demo_root / 'pldm_tools'
         env['PYTHONPATH'] = str(tools_dir) + ':' + env.get('PYTHONPATH', '')
         
-        result = subprocess.run(cmd, cwd=repo_root, capture_output=False, text=True, env=env)
+        result = subprocess.run(cmd, cwd=demo_root, capture_output=False, text=True, env=env)
         if result.returncode == 0:
             logger.info("Configurator completed successfully")
             

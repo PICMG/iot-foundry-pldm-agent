@@ -252,9 +252,11 @@ def scan_and_generate(collect_output: str, source_mockup: str, dest_mockup: str,
     """
     console.print('\n[bold cyan]Scan devices and generate mockup[/bold cyan]\n')
 
-    repo_root = Path(__file__).parents[3]
-    collector = repo_root / 'tools' / 'pldm-mapping-wizard' / 'collect_endpoints.py'
-    generator = repo_root / 'tools' / 'pldm-mapping-wizard' / 'clean_mockup.py'
+    pldm_tools_dir = Path(__file__).parents[1]
+    demo_root = pldm_tools_dir.parent
+    repo_root = demo_root.parent
+    collector = pldm_tools_dir / 'collect_endpoints.py'
+    generator = pldm_tools_dir / 'clean_mockup.py'
 
     if not collector.exists():
         console.print(f"[red]Collector script not found: {collector}[/red]")
