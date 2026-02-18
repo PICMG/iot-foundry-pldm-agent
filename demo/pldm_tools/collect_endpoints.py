@@ -25,11 +25,42 @@ import base64
 console = Console()
 
 
+def _has_master_for_tty_index(tty_index: str) -> bool:
+    """Return True if any process currently has a master PTY referencing tty-index.
+
+    Scans /proc/*/fdinfo/* for a line `tty-index:\t<tty_index>`.
+    """
+    try:
+        for pid in os.listdir('/proc'):
+            if not pid.isdigit():
+                continue
+            fdinfo_dir = f'/proc/{pid}/fdinfo'
+            if not os.path.isdir(fdinfo_dir):
+                continue
+            try:
+                for fname in os.listdir(fdinfo_dir):
+                    fdinfo_path = os.path.join(fdinfo_dir, fname)
+                    try:
+                        with open(fdinfo_path, 'r') as f:
+                            for line in f:
+                                if line.startswith('tty-index'):
+                                    if line.strip().split()[-1] == str(tty_index):
+                                        return True
+                    except Exception:
+                        continue
+            except Exception:
+                continue
+    except Exception:
+        return False
+    return False
+
+
 def discover_devices() -> List[dict]:
     """Return list of candidate serial devices (ttyUSB* and ttyACM*).
     
     Note: pts devices can be added manually by entering their path directly.
     """
+
     devs = []
 
     # Add regular USB devices
@@ -37,7 +68,76 @@ def discover_devices() -> List[dict]:
     for p in paths:
         usb = get_usb_address(p)
         devs.append({'path': p, 'usb_addr': usb, 'valid': True})
-    
+
+    # --- Begin: Automatic PTS endpoint discovery ---
+    # --- Begin: Automatic PTS endpoint discovery (no psutil) ---
+    import re
+    endpoint_procs = []
+    for pid in os.listdir('/proc'):
+        if not pid.isdigit():
+            continue
+        try:
+            cmdline_path = f'/proc/{pid}/cmdline'
+            with open(cmdline_path, 'rb') as f:
+                cmdline_bytes = f.read()
+            # cmdline is null-separated
+            cmdline = [os.path.basename(arg.decode()) for arg in cmdline_bytes.split(b'\0') if arg]
+            if any(arg == 'endpoint' for arg in cmdline):
+                endpoint_procs.append(int(pid))
+        except Exception:
+            continue
+
+    # Collect candidate pts entries first (fast, single-pass)
+    candidates = []  # list of (tty_index, pts_path, pid)
+    for pid in endpoint_procs:
+        fd_dir = f'/proc/{pid}/fd'
+        fdinfo_dir = f'/proc/{pid}/fdinfo'
+        try:
+            for fd_name in os.listdir(fd_dir):
+                fd_path = os.path.join(fd_dir, fd_name)
+                try:
+                    target = os.readlink(fd_path)
+                except Exception:
+                    continue
+                if os.path.basename(target) == 'ptmx':  # master side
+                    fdinfo_path = os.path.join(fdinfo_dir, fd_name)
+                    try:
+                        # Read fdinfo once and inspect flags/tty-index
+                        with open(fdinfo_path, 'r') as f:
+                            fdinfo_lines = [l.strip() for l in f]
+                        # Check flags to skip non-blocking masters (auxiliary PTYs)
+                        flags_line = next((l for l in fdinfo_lines if l.startswith('flags:')), None)
+                        if flags_line:
+                            try:
+                                flags_val = int(flags_line.split()[1], 8)
+                                # O_NONBLOCK is 0o4000
+                                if flags_val & 0o4000:
+                                    continue
+                            except Exception:
+                                pass
+                        for line in fdinfo_lines:
+                            if line.startswith('tty-index'):
+                                tty_index = line.split()[-1]
+                                pts_path = f'/dev/pts/{tty_index}'
+                                if os.path.exists(pts_path):
+                                    candidates.append((tty_index, pts_path, pid))
+                                break
+                    except Exception:
+                        continue
+        except Exception:
+            continue
+    # --- End: Automatic PTS endpoint discovery (no psutil) ---
+    # Stability check: verify master still exists for candidate tty indices
+    if candidates:
+        time.sleep(0.05)
+        seen = set()
+        for tty_index, pts_path, pid in candidates:
+            if tty_index in seen:
+                continue
+            if _has_master_for_tty_index(tty_index):
+                devs.append({'path': pts_path, 'usb_addr': None, 'valid': True, 'discovered_by': 'endpoint-pts', 'endpoint_pid': pid})
+                seen.add(tty_index)
+
     return devs
 
 
