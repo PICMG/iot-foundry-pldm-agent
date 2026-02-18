@@ -250,11 +250,13 @@ class MCTPFramer:
         payload_start = 3
         payload_end = 3 + byte_count
         for i, b in enumerate(frame):
-            if (i >= payload_start) and (i <= payload_end) and (b in (MCTPFramer.FRAME_CHAR, MCTPFramer.ESCAPE_CHAR)):
+            # Only escape FRAME_CHAR and ESCAPE_CHAR in the body (payload_start to payload_end-1)
+            if (i >= payload_start and i < payload_end) and (b in (MCTPFramer.FRAME_CHAR, MCTPFramer.ESCAPE_CHAR)):
                 tx.append(MCTPFramer.ESCAPE_CHAR)
                 tx.append((b - 0x20) & 0xFF)
             else:
                 tx.append(b)
+        # FCS and end flag must never be escaped
         return bytes(tx)
 
     @staticmethod
@@ -268,18 +270,25 @@ class MCTPFramer:
         except ValueError:
             return None
 
-        payload = data[start + 1:end]
-        payload = MCTPFramer._unescape_body(payload)
-        if len(payload) < 6:
+        # Only unescape the payload region, not FCS/end sync
+        raw_payload = data[start + 1:end]
+        if len(raw_payload) < 6:
             return None
+        protocol = raw_payload[0]
+        byte_count = raw_payload[1]
+        header_version = raw_payload[2]
+        dest = raw_payload[3]
+        src = raw_payload[4]
+        flags = raw_payload[5]
+        msg_type = raw_payload[6] if len(raw_payload) > 6 else None
 
-        protocol = payload[0]
-        byte_count = payload[1]
-        header_version = payload[2]
-        dest = payload[3]
-        src = payload[4]
-        flags = payload[5]
-        msg_type = payload[6] if len(payload) > 6 else None
+        # Unescape only the body (payload) region
+        body_start = 0
+        body_end = 2 + byte_count
+        unescaped_body = MCTPFramer._unescape_body(raw_payload[body_start:body_end])
+        # FCS and end sync are not unescaped
+        fcs_and_end = raw_payload[body_end:]
+        payload = unescaped_body + fcs_and_end
         
         # PLDM header bit-field parsing (if msg_type == 1 = PLDM)
         instance = None
@@ -364,31 +373,28 @@ class MCTPFramer:
             if data[i] != MCTPFramer.FRAME_CHAR:
                 i += 1
                 continue
-                
             start = i
             i += 1
-            
             # Need at least: protocol(1) + byte_count(1) + FCS(2) + end_flag(1) = 5 more bytes
             if i + 4 >= len(data):
                 break
-                
-            # Read byte_count field (position 2 in frame)
             protocol = data[i]
             byte_count = data[i + 1]
-            
             # Calculate expected end position:
-            # start_flag(1) + protocol(1) + byte_count(1) + data(byte_count) + FCS(2) + end_flag(1)
             expected_end = start + 1 + 1 + 1 + byte_count + 2 + 1
-            
-            # Verify we have enough data and end flag is present
+            # Only count end flag if it's not escaped (should be literal 0x7E)
             if expected_end <= len(data) and data[expected_end - 1] == MCTPFramer.FRAME_CHAR:
+                # Check for any escaped 0x7E in the body (payload_start to payload_end-1)
+                payload_start = start + 3
+                payload_end = payload_start + byte_count
+                # Only check for ESCAPE_CHAR in the payload region
+                if MCTPFramer.ESCAPE_CHAR in data[payload_start:payload_end]:
+                    i = start + 1
+                    continue
                 frames.append(data[start:expected_end])
-                # RFC1662: This 0x7E can serve as opening flag for next frame
                 i = expected_end - 1
             else:
-                # Couldn't find valid frame, advance to next potential start
                 i = start + 1
-                
         return frames
 
     @staticmethod

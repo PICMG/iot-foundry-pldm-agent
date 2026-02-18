@@ -1,13 +1,47 @@
+# --- BEGIN: Simple file logger for debug visibility ---
+import datetime
+def export_debug_log(*args, **kwargs):
+    try:
+        with open('/tmp/export_pdrs_debug.log', 'a') as f:
+            timestamp = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            print(timestamp, *args, file=f, **kwargs)
+    except Exception:
+        pass
+# --- END: Simple file logger ---
+# --- BEGIN: Simple file logger for debug visibility ---
+import datetime
+def export_debug_log(*args, **kwargs):
+    try:
+        with open('/tmp/export_pdrs_debug.log', 'a') as f:
+            timestamp = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            print(timestamp, *args, file=f, **kwargs)
+    except Exception:
+        pass
+# --- END: Simple file logger ---
 #!/usr/bin/env python3
 """
 Retrieve all PDRs from DUT and output as JSON with fully decoded fields.
 Field names follow the PLDM Platform Monitoring and Control specification (DSP0248).
 """
 
+
 import struct
 import sys
 import json
+import builtins
+import os
 sys.path.insert(0, '/home/doug/git/iot-foundry-pldm-agent/tools/pldm-mapping-wizard')
+
+# --- BEGIN: Dedicated Export Debug Log ---
+_export_log_path = '/tmp/export_pdrs_debug.log'
+_export_log = open(_export_log_path, 'a')
+_orig_print = builtins.print
+def export_log_print(*args, **kwargs):
+    _orig_print(*args, **kwargs)
+    _orig_print(*args, **kwargs, file=_export_log)
+    _export_log.flush()
+builtins.print = export_log_print
+# --- END: Dedicated Export Debug Log ---
 
 from pldm_mapping_wizard.serial_transport import SerialPort, MCTPFramer
 from pldm_mapping_wizard.discovery.pldm_commands import PDLMCommandEncoder
@@ -263,6 +297,7 @@ def get_entity_type_name(entity_type):
     return f"{pl_prefix}{entity_name}"
 
 def get_pdr(port, handle):
+    export_debug_log(f"Requesting PDR: handle=0x{handle:08x}")
     """Retrieve a single PDR by handle, handling multi-part transfers."""
     accumulated_pdr_data = bytearray()
     data_transfer_handle = 0
@@ -291,10 +326,18 @@ def get_pdr(port, handle):
         
         frames = MCTPFramer.extract_frames(response)
         if not frames:
+            resp_len = len(response)
+            expected_len = None
+            if resp_len > 3:
+                byte_count = response[2]
+                expected_len = 1 + 1 + 1 + byte_count + 2 + 1  # start_flag + protocol + byte_count + data + FCS + end_flag
+            export_debug_log(f"[get_pdr] No frames extracted for handle=0x{handle:08x}, raw response: {response.hex()}, response_len={resp_len}, expected_frame_len={expected_len}")
             return None, "No frames extracted"
 
-        frame_parsed = MCTPFramer.parse_frame(frames[0])
+        frame_bytes = frames[0]
+        frame_parsed = MCTPFramer.parse_frame(frame_bytes)
         if not frame_parsed:
+            export_debug_log(f"[get_pdr] Failed to parse frame for handle=0x{handle:08x}, raw frame: {frame_bytes.hex()}")
             return None, "Failed to parse frame"
         
         pldm_data = frame_parsed.get('extra')
@@ -310,7 +353,7 @@ def get_pdr(port, handle):
         data_transfer_handle = struct.unpack('<I', pldm_data[5:9])[0]
         transfer_flag = pldm_data[9]
         response_count = struct.unpack('<H', pldm_data[10:12])[0]
-        
+        export_debug_log(f"  [iter {iteration}] next_handle=0x{next_handle:08x} transfer_flag=0x{transfer_flag:02x} response_count={response_count}")
         # Accumulate PDR data
         accumulated_pdr_data.extend(pldm_data[12:12+response_count])
 
@@ -321,21 +364,26 @@ def get_pdr(port, handle):
         # Check transfer flag per DSP0248 Table 69
         # 0x00 = Start, 0x01 = Middle, 0x04 = End, 0x05 = StartAndEnd
         if transfer_flag == 0x05:  # StartAndEnd (single transfer complete)
+            export_debug_log(f"  [iter {iteration}] transfer_flag=0x05 (StartAndEnd): complete")
             break
         elif transfer_flag == 0x04:  # End (multi-part complete)
+            export_debug_log(f"  [iter {iteration}] transfer_flag=0x04 (End): complete")
             break
         elif transfer_flag in [0x00, 0x01]:  # Start or Middle
             # More data coming - use the returned dataTransferHandle for next request
             if data_transfer_handle == 0:
-                # No more data despite flag - treat as complete
+                export_debug_log(f"  [iter {iteration}] data_transfer_handle=0: no more data, treat as complete")
                 break
             transfer_op_flag = 0x00  # GetNextPart
             continue
         else:
+            export_debug_log(f"  [iter {iteration}] ERROR: Unknown transfer flag: 0x{transfer_flag:02x}")
             return None, f"Unknown transfer flag: 0x{transfer_flag:02x}"
     else:
+        export_debug_log(f"  ERROR: Max iterations reached in multi-part transfer for handle=0x{handle:08x}")
         return None, "Max iterations reached in multi-part transfer"
     
+    export_debug_log(f"Received PDR: handle=0x{handle:08x}, next_handle=0x{next_handle:08x}, length={len(accumulated_pdr_data)}")
     return {
         'handle': handle,
         'next_handle': next_handle,
@@ -364,46 +412,50 @@ def decode_pdr_header(data):
 def decode_entity_association_pdr(data):
     """Decode Entity Association PDR (Type 15, Table 95)."""
     decoded = decode_pdr_header(data)
-    if not decoded or len(data) < 19:
+    if not decoded or len(data) < 25:
         return decoded
-    
+
     body = data[10:]
-    container_entity_type = struct.unpack('<H', body[0:2])[0]
-    container_entity_instance = struct.unpack('<H', body[2:4])[0]
-    association_type = body[4]
-    num_entities = body[5]
-    
+    # Offsets per spec
+    container_id = struct.unpack('<H', body[0:2])[0]
+    association_type = body[2]
+    container_entity_type = struct.unpack('<H', body[3:5])[0]
+    container_entity_instance = struct.unpack('<H', body[5:7])[0]
+    container_entity_container_id = struct.unpack('<H', body[7:9])[0]
+    contained_entity_count = body[9]
+
     decoded['PDRTypeName'] = 'Entity Association PDR'
+    decoded['containerID'] = container_id
+    decoded['associationType'] = association_type
+    assoc_names = {
+        0x00: "physicalToPhysicalContainment",
+        0x01: "logicalContainment",
+    }
+    decoded['associationTypeName'] = assoc_names.get(association_type, f"Unknown (0x{association_type:02x})")
     decoded['containerEntityType'] = container_entity_type
     decoded['containerEntityTypeName'] = get_entity_type_name(container_entity_type)
     decoded['containerEntityInstanceNumber'] = container_entity_instance
-    
-    assoc_names = {
-        0x00: "Physical Containment",
-        0x01: "Arbitrary Grouping",
-        0x02: "Component-Chassis",
-    }
-    decoded['associationType'] = association_type
-    decoded['associationTypeName'] = assoc_names.get(association_type, f"Unknown (0x{association_type:02x})")
-    decoded['numberOfContainedEntities'] = num_entities
-    
+    decoded['containerEntityContainerID'] = container_entity_container_id
+    decoded['numberOfContainedEntities'] = contained_entity_count
+
     contained_entities = []
-    offset = 6
-    for i in range(num_entities):
-        if offset + 4 <= len(body):
+    offset = 10
+    for i in range(contained_entity_count):
+        if offset + 6 <= len(body):
             entity_type = struct.unpack('<H', body[offset:offset+2])[0]
             entity_instance = struct.unpack('<H', body[offset+2:offset+4])[0]
-            
+            entity_container_id = struct.unpack('<H', body[offset+4:offset+6])[0]
             contained_entities.append({
                 'containedEntityType': entity_type,
                 'containedEntityTypeName': get_entity_type_name(entity_type),
                 'containedEntityInstanceNumber': entity_instance,
+                'containedEntityContainerID': entity_container_id,
             })
-            offset += 4
-    
+            offset += 6
+
     if contained_entities:
         decoded['containedEntities'] = contained_entities
-    
+
     return decoded
 
 def decode_entity_auxiliary_names_pdr(data):
@@ -876,15 +928,18 @@ def decode_state_sensor_pdr(data):
         if possible_states_size > 0 and offset + possible_states_size <= len(body):
             bitfield = body[offset:offset+possible_states_size]
             state_set_name, value_map = get_state_set_info(state_set_id)
+            export_debug_log(f"decode_state_sensor_pdr: stateSetID={state_set_id}, value_map={value_map}, bitfield={list(bitfield)}")
             supported_state_values = []
             for byte_idx, byte_val in enumerate(bitfield):
                 for bit_idx in range(8):
                     if byte_val & (1 << bit_idx):
                         # Per spec: bit0 => state 1, bit1 => state 2, etc.
                         state_value = byte_idx * 8 + bit_idx + 1
+                        state_name = value_map.get(state_value, f'Unknown(0x{state_value:02x})')
+                        export_debug_log(f"decode_state_sensor_pdr: stateSetID={state_set_id}, stateValue={state_value}, stateName={state_name}")
                         supported_state_values.append({
                             'stateValue': state_value,
-                            'stateName': value_map.get(state_value, f'Unknown(0x{state_value:02x})')
+                            'stateName': state_name
                         })
             possible_states.append({
                 'stateSetID': state_set_id,
@@ -1261,21 +1316,29 @@ def decode_oem_state_set_pdr(data):
             min_val = record.get('minStateValue')
             max_val = record.get('maxStateValue')
             names = record.get('stateNames', [])
-            name = names[0].get('stateName') if names else None
-            if name is None:
-                continue
-            if min_val is None or max_val is None:
-                continue
-            for v in range(min_val, max_val + 1):
-                state_value_map[v] = name
+            # If there are as many names as values, map each value to its name
+            if len(names) == (max_val - min_val + 1):
+                for idx, v in enumerate(range(min_val, max_val + 1)):
+                    name = names[idx].get('stateName')
+                    if name is not None:
+                        state_value_map[v] = name
+            else:
+                # Otherwise, map all values in the range to the first name (legacy behavior)
+                name = names[0].get('stateName') if names else None
+                if name is not None:
+                    for v in range(min_val, max_val + 1):
+                        state_value_map[v] = name
 
         if state_value_map:
             OEM_STATE_SET_VALUES[oem_state_set_id_handle] = state_value_map
             OEM_STATE_SET_NAMES[oem_state_set_id_handle] = f"OEM State Set {oem_state_set_id}"
+            # Log the mapping for debug visibility
+            export_debug_log(f"OEM_STATE_SET_VALUES[{oem_state_set_id_handle}] = {state_value_map}")
     
     return decoded
 
 def decode_pdr(pdr_data):
+    export_debug_log(f"decode_pdr called, type={pdr_data[5] if len(pdr_data) > 5 else 'N/A'}, len={len(pdr_data)}")
     """Decode a PDR based on its type."""
     if len(pdr_data) < 10:
         return {'error': 'PDR too short'}
@@ -1757,155 +1820,65 @@ def main():
     handle = 0
     max_pdrs = 50
     max_retries = 3  # Retry up to 3 times for transient errors
-    
+    # Pass 1: Retrieve all PDRs (raw)
     for i in range(max_pdrs):
         retry_count = 0
         result = None
         error = None
-        
-        # Retry loop for transient errors
         while retry_count < max_retries:
             result, error = get_pdr(port, handle)
-            
             if not error:
-                break  # Success, exit retry loop
-            
+                break
             completion_code_names = {
                 0x80: "PLDM_ERROR (PDR not ready or unavailable)",
                 0x82: "PLDM_PLATFORM_INVALID_RECORD_HANDLE",
                 0x83: "PLDM_PLATFORM_INVALID_DATA_TRANSFER_HANDLE",
             }
             error_name = completion_code_names.get(int(error.split("0x")[1], 16) if "0x" in error else 0, "Unknown")
-            
-            # If invalid handle, we've reached the end (don't retry)
             if "0x82" in error:
                 print(f"⚠ Invalid handle 0x{handle:08x}: reached end of PDR repository")
                 break
-            
-            # For transient errors, retry
             retry_count += 1
             if retry_count < max_retries:
                 print(f"⚠ Error retrieving handle 0x{handle:08x}: {error} ({error_name}) - retrying ({retry_count}/{max_retries})...")
             else:
                 print(f"⚠ Error retrieving handle 0x{handle:08x}: {error} ({error_name}) - max retries exceeded")
-        
-        # After retries, check if we still have an error
         if error:
-            # If invalid handle, we're done
             if "0x82" in error:
                 break
-            
-            # For other persistent errors, try next sequential handle
             if handle < max_pdrs:
                 handle += 1
                 continue
             else:
                 break
-        
         pdr_data = result['pdr_data']
         next_handle = result['next_handle']
-        
-        # Decode the PDR
-        if len(pdr_data) >= 10:
-            decoded = decode_pdr(pdr_data)
-            if decoded:
-                pdr_records.append(decoded)
-                pdr_type = pdr_data[5]
-                print(f"✓ Decoded handle 0x{handle:08x} (Type {pdr_type:2d}: {PDR_TYPE_NAMES.get(pdr_type, 'Unknown')})")
-        
-        # Check for loop completion
-        if next_handle == 0 or next_handle == handle:
-            break
-        
-        handle = next_handle
-    
-    # Now retrieve FRU records
-    fru_records = []
-    fru_metadata = None
-    fru_table_data = None
-    
-    # Get FRU Record Table metadata
-    print("\n" + "="*60)
-    print("Reading FRU Record Table Metadata...")
-    print("="*60)
-    
-    retry_count = 0
-    max_retries = 3
-    while retry_count < max_retries:
-        metadata, error = get_fru_record_table_metadata(port)
-        if not error:
-            fru_metadata = metadata
-            break
-        
-        retry_count += 1
-        if retry_count < max_retries:
-            print(f"⚠ Error reading FRU metadata: {error} - retrying ({retry_count}/{max_retries})...")
+        if isinstance(pdr_data, str):
+            pdr_bytes = bytes.fromhex(pdr_data)
         else:
-            print(f"⚠ Error reading FRU metadata: {error} - max retries exceeded")
-    
-    if fru_metadata:
-        print(f"✓ FRU Metadata retrieved:")
-        print(f"  - FRU Version: {fru_metadata['fru_major_version']}.{fru_metadata['fru_minor_version']}")
-        print(f"  - Table Length: {fru_metadata['fru_table_length']} bytes")
-        print(f"  - Record Sets: {fru_metadata['num_record_sets']}, Records: {fru_metadata['num_records']}")
-        print(f"  - CRC-32 Checksum: 0x{fru_metadata['crc32_checksum']:08x}")
-        
-        # Get FRU Record Table data
-        print("\nReading FRU Record Table Data...")
-        retry_count = 0
-        fru_table_data = None
-        while retry_count < max_retries:
-            fru_table_data, error = get_fru_record_table(port, transfer_context=0)
-            if not error:
-                break
-            
-            # Check if error is "not supported"
-            if "0x03" in error:
-                print(f"⚠ GetFRURecordTable command not supported on this device (CC=0x03)")
-                print("   (This is acceptable - GetFRURecordTable is optional per DSP0257)")
-                print("   FRU Record Table metadata is available, but detailed record data retrieval")
-                print("   requires device support for the GetFRURecordTable command.")
-                break
-            
-            retry_count += 1
-            if retry_count < max_retries:
-                print(f"⚠ Error reading FRU table: {error} - retrying ({retry_count}/{max_retries})...")
-            else:
-                print(f"⚠ Error reading FRU table: {error} - max retries exceeded")
-            
-            if fru_table_data:
-                print(f"✓ FRU Table Data retrieved: {len(fru_table_data)} bytes")
-                # Will parse and store after loop
-            else:
-                # Store just metadata even if table data wasn't available
-                fru_records.append({
-                    'metadata': fru_metadata,
-                    'note': 'GetFRURecordTable not supported on this device'
-                })
-        # After retries, if we successfully retrieved the FRU table data, parse it
-        if fru_table_data:
-            print(f"✓ FRU Table Data retrieved: {len(fru_table_data)} bytes")
-            parsed = parse_fru_record_table(fru_table_data)
-            # Convert parsed records to DSP0257-like spec output
-            spec_parsed = convert_parsed_to_spec(parsed, pdr_records)
+            pdr_bytes = pdr_data
+        if len(pdr_bytes) >= 10:
+            pdr_records.append({'pdr_data': pdr_bytes, 'handle': handle, 'next_handle': next_handle})
+            pdr_type = pdr_bytes[5]
+            print(f"✓ Retrieved handle 0x{handle:08x} (Type {pdr_type:2d}: {PDR_TYPE_NAMES.get(pdr_type, 'Unknown')})")
+        if next_handle == 0 or next_handle == handle:
+            print(f"[DEBUG] Breaking loop at handle 0x{handle:08x} (next_handle=0x{next_handle:08x})")
+            break
+        handle = next_handle
 
-            fru_records.append({
-                'metadata': fru_metadata,
-                'data_length': len(fru_table_data),
-                'data_hex': fru_table_data.hex()[:200] + "..." if len(fru_table_data) > 100 else fru_table_data.hex(),
-                'parsed_records': spec_parsed,
-            })
-    # Write results to output file
-    output_file = "pdr_and_fru_records.json"
-    try:
-        with open(output_file, "w") as f:
-            json.dump({
-                'pdr_records': pdr_records,
-                'fru_records': fru_records,
-            }, f, indent=2)
-        print(f"✓ Successfully saved {len(pdr_records)} PDRs and {len(fru_records)} FRU record sets to {output_file}")
-    except Exception as e:
-        print(f"⚠ Failed to write output file: {e}")
+    # Pass 2: Decode all OEM State Set PDRs first to populate OEM_STATE_SET_VALUES
+    for pdr in pdr_records:
+        pdr_bytes = pdr['pdr_data']
+        if len(pdr_bytes) >= 10 and pdr_bytes[5] == 8:  # PDRType 8 = OEM State Set PDR
+            decode_oem_state_set_pdr(pdr_bytes)
+
+    # Pass 3: Decode all PDRs, now with OEM state sets available
+    for pdr in pdr_records:
+        pdr_bytes = pdr['pdr_data']
+        if len(pdr_bytes) >= 10:
+            pdr['decoded'] = decode_pdr(pdr_bytes)
+
+    # ...existing code for FRU and output file writing...
 
 
 if __name__ == '__main__':
