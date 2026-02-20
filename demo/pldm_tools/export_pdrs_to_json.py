@@ -30,6 +30,8 @@ import sys
 import json
 import builtins
 import os
+import base64
+import zlib
 sys.path.insert(0, '/home/doug/git/iot-foundry-pldm-agent/tools/pldm-mapping-wizard')
 
 # --- BEGIN: Dedicated Export Debug Log ---
@@ -1413,7 +1415,7 @@ def get_fru_record_table_metadata(port):
     return metadata, None
 
 
-def get_fru_record_table(port, transfer_context=0):
+def get_fru_record_table(port, transfer_context=0, expected_length: int | None = None):
     """Retrieve FRU Record Table data, handling multi-part transfers."""
     accumulated_fru_data = bytearray()
     data_transfer_handle = 0
@@ -1435,20 +1437,41 @@ def get_fru_record_table(port, transfer_context=0):
         frame = MCTPFramer.build_frame(pldm_msg=cmd, dest=0, src=16, msg_type=0x01)
         port.write(frame)
         response = port.read_until_idle()
-        
+
         if not response:
             return None, "No response"
-        
+
+        # Debug dump of the raw response
+        try:
+            export_debug_log(f"[get_fru_record_table] RAW response ({len(response)} bytes): {response.hex()}")
+        except Exception:
+            pass
+
         frames = MCTPFramer.extract_frames(response)
         if not frames:
+            export_debug_log(f"[get_fru_record_table] No frames extracted for FRU response; raw_len={len(response)}")
             return None, "No frames extracted"
+
+        # Log extracted frames
+        try:
+            for i, fr in enumerate(frames):
+                export_debug_log(f"[get_fru_record_table] Extracted frame[{i}] ({len(fr)} bytes): {fr.hex()}")
+        except Exception:
+            pass
 
         frame_parsed = MCTPFramer.parse_frame(frames[0])
         if not frame_parsed:
+            export_debug_log(f"[get_fru_record_table] Failed to parse first frame, first_frame_hex={frames[0].hex() if frames and isinstance(frames[0], (bytes, bytearray)) else 'NA'}")
             return None, "Failed to parse frame"
         pldm_data = frame_parsed.get('extra')
         if not pldm_data or len(pldm_data) < 1:
+            export_debug_log(f"[get_fru_record_table] Invalid PLDM payload: extra_present={bool(pldm_data)} len={(len(pldm_data) if isinstance(pldm_data, (bytes, bytearray)) else 'NA')}")
             return None, f"Invalid PLDM payload"
+        try:
+            if isinstance(pldm_data, (bytes, bytearray)):
+                export_debug_log(f"[get_fru_record_table] Parsed frame extra ({len(pldm_data)} bytes): {pldm_data.hex()}")
+        except Exception:
+            pass
         
         completion_code = pldm_data[0]
         if completion_code != 0:
@@ -1470,7 +1493,21 @@ def get_fru_record_table(port, transfer_context=0):
         # FRU data starts at offset 6
         fru_data = pldm_data[6:]
 
-        # Accumulate FRU data
+        # Some DUTs append a per-packet 4-byte CRC to each FRU fragment.
+        # Detect and strip a trailing 4-byte little-endian CRC if it matches
+        # the CRC32 of the preceding bytes in this fragment.
+        try:
+            if len(fru_data) >= 4:
+                possible_crc = struct.unpack_from('<I', fru_data, len(fru_data) - 4)[0]
+                payload_part = fru_data[:-4]
+                calc = zlib.crc32(payload_part) & 0xFFFFFFFF
+                if calc == possible_crc:
+                    export_debug_log(f"[get_fru_record_table] Stripping per-fragment CRC (4 bytes) from fragment iteration={iteration}, fragment_len={len(fru_data)}")
+                    fru_data = payload_part
+        except Exception:
+            pass
+
+        # Accumulate FRU data (with any per-fragment CRC removed)
         accumulated_fru_data.extend(fru_data)
 
         # Response flags: treat END/START_AND_END/ACKNOWLEDGE_COMPLETION as completion
@@ -1488,10 +1525,30 @@ def get_fru_record_table(port, transfer_context=0):
     else:
         return None, "Max iterations reached in multi-part transfer"
     
+    # Final debug dump of accumulated FRU data (hex prefix and base64 prefix)
+    try:
+        export_debug_log(f"[get_fru_record_table] Accumulated FRU bytes: len={len(accumulated_fru_data)} hex_prefix={accumulated_fru_data[:64].hex()}")
+        try:
+            export_debug_log(f"[get_fru_record_table] Accumulated FRU base64 (prefix): {base64.b64encode(accumulated_fru_data)[:128].decode('ascii', errors='replace')}")
+        except Exception:
+            pass
+    except Exception:
+        pass
+
+    # If caller provided an expected length (from metadata), trim to it
+    try:
+        if expected_length is not None:
+            exp = int(expected_length)
+            if len(accumulated_fru_data) > exp:
+                export_debug_log(f"[get_fru_record_table] Trimming accumulated FRU data from {len(accumulated_fru_data)} to expected_length={exp} (remove padding/CRC)")
+                accumulated_fru_data = accumulated_fru_data[:exp]
+    except Exception:
+        pass
+
     return bytes(accumulated_fru_data), None
 
 
-def parse_fru_record_table(data: bytes):
+def parse_fru_record_table(data: bytes, total_length: int | None = None):
     """Parse FRU Record Table per DSP0257 Section 10.5.
 
     Returns a list of records. Each record is a dict with keys:
@@ -1542,7 +1599,9 @@ def parse_fru_record_table(data: bytes):
 
     records = []
     offset = 0
-    while offset + 5 <= len(data):
+    # Restrict parsing to total_length if provided (to avoid parsing CRC/padding)
+    max_len = len(data) if total_length is None else min(len(data), int(total_length))
+    while offset + 5 <= max_len:
         # Minimum header: 2 bytes RecordSetID, 1 byte RecordType,
         # 1 byte NumFields, 1 byte Encoding
         fru_record_set_id = struct.unpack_from('<H', data, offset)[0]
@@ -1563,16 +1622,16 @@ def parse_fru_record_table(data: bytes):
         }
 
         for i in range(num_fields):
-            if offset + 2 > len(data):
+            if offset + 2 > max_len:
                 break
             field_type = data[offset]
             offset += 1
             field_len = data[offset]
             offset += 1
-            if offset + field_len > len(data):
-                # truncated value - clamp
-                value_bytes = data[offset:]
-                offset = len(data)
+            if offset + field_len > max_len:
+                # truncated value - clamp to max_len
+                value_bytes = data[offset:max_len]
+                offset = max_len
             else:
                 value_bytes = data[offset:offset+field_len]
                 offset += field_len
@@ -1679,7 +1738,8 @@ def parse_fru_record_table(data: bytes):
 
         records.append(rec)
 
-    return records
+    # Return parsed records and number of bytes consumed from the input
+    return records, offset
 
 
 def convert_parsed_to_spec(parsed_records, pdr_records):

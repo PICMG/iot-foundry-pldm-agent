@@ -369,15 +369,52 @@ def main(output):
                     raw_fru_b64 = None
                     metadata, ferr = mod.get_fru_record_table_metadata(port)
                     if not ferr and metadata:
-                        table_data, ferr2 = mod.get_fru_record_table(port, transfer_context=0)
+                        expected_len = None
+                        try:
+                            expected_len = int(metadata.get('fru_table_length')) if isinstance(metadata, dict) and metadata.get('fru_table_length') is not None else None
+                        except Exception:
+                            expected_len = None
+                        table_data, ferr2 = mod.get_fru_record_table(port, transfer_context=0, expected_length=expected_len)
                         if not ferr2 and table_data:
-                            parsed = mod.parse_fru_record_table(table_data)
-                            spec_parsed = mod.convert_parsed_to_spec(parsed, pdrs)
-                            fru_sets.append({'metadata': metadata, 'data_length': len(table_data), 'parsed_records': spec_parsed})
+                            # Robust parse: let parser report how many bytes it consumed
                             try:
-                                raw_fru_b64 = base64.b64encode(table_data).decode('ascii')
+                                # Prefer authoritative metadata length to avoid parsing CRC/padding
+                                if isinstance(metadata, dict) and isinstance(metadata.get('fru_table_length'), int):
+                                    parsed_records, consumed = mod.parse_fru_record_table(table_data, metadata.get('fru_table_length'))
+                                else:
+                                    parsed_records, consumed = mod.parse_fru_record_table(table_data)
+                            except Exception:
+                                parsed_records, consumed = [], 0
+
+                            # Fallback: if parser consumed nothing, optionally try metadata length
+                            if consumed == 0:
+                                try:
+                                    if isinstance(metadata, dict) and isinstance(metadata.get('fru_table_length'), int):
+                                        fru_len = int(metadata.get('fru_table_length'))
+                                        if len(table_data) >= fru_len:
+                                            consumed = fru_len
+                                except Exception:
+                                    consumed = len(table_data)
+
+                            # Trim table to parser-consumed bytes (removes padding and CRC)
+                            actual_table = table_data[:consumed]
+
+                            # Convert parsed portion to spec
+                            spec_parsed = mod.convert_parsed_to_spec(parsed_records, pdrs)
+                            fru_sets.append({'metadata': metadata, 'data_length': len(actual_table), 'parsed_records': spec_parsed})
+
+                            # Save stripped raw FRU (no CRC/padding) as base64 per your preference
+                            try:
+                                raw_fru_b64 = base64.b64encode(actual_table).decode('ascii')
                             except Exception:
                                 raw_fru_b64 = None
+
+                            # Debug: log how many bytes were trimmed (padding + CRC)
+                            try:
+                                trimmed_len = len(table_data) - len(actual_table)
+                                mod.export_debug_log(f"[collect_endpoints] device={dev['path']} table_bytes={len(table_data)} consumed={consumed} trimmed={trimmed_len}")
+                            except Exception:
+                                pass
                         else:
                             fru_sets.append({'metadata': metadata, 'note': 'GetFRURecordTable not supported or failed', 'error': ferr2})
                     elif ferr:

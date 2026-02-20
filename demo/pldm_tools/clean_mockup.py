@@ -561,8 +561,22 @@ def main(source: str, dest: str, pdr_file: str | None):
                     if isinstance(ep, dict):
                         # common locations
                         devpath = ep.get('dev') or ep.get('device')
-                        model = ep.get('fru', {}).get('Model') if isinstance(ep.get('fru'), dict) else ep.get('Model')
-                        serial = ep.get('fru', {}).get('SerialNumber') if isinstance(ep.get('fru'), dict) else ep.get('SerialNumber')
+                        # FRU data in our collected JSON is stored under 'fru_records'
+                        # as parsed_records -> fields (list of dicts with typeName/value).
+                        def _fru_field(ep_dict: dict, type_name: str):
+                            if not isinstance(ep_dict, dict):
+                                return None
+                            for fru_set in ep_dict.get('fru_records', []) or []:
+                                for parsed in fru_set.get('parsed_records', []) or []:
+                                    for f in parsed.get('fields', []) or []:
+                                        if f.get('typeName') == type_name and 'value' in f:
+                                            return f.get('value')
+                            return None
+
+                        # Try FRU parsed_fields first, then fall back to top-level PDR keys.
+                        model = _fru_field(ep, 'Model') or ep.get('Model')
+                        # FRU uses 'Serial Number' as the typeName in parsed fields
+                        serial = _fru_field(ep, 'Serial Number') or ep.get('SerialNumber')
                         # search for entityIDName
                         if 'entityIDName' in ep:
                             entityIDName = ep.get('entityIDName')
