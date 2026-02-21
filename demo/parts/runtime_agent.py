@@ -240,8 +240,10 @@ class USBPortMonitor:
         current_ports = {}
         
         try:
+            # Find both ttyUSB* and ttyACM* sysfs entries so ACM devices
+            # (CDC ACM) are also detected on unplug/replug events.
             result = subprocess.run(
-                ["find", "/sys/devices", "-name", "ttyUSB*"],
+                ["find", "/sys/devices", "-name", "ttyUSB*", "-o", "-name", "ttyACM*"],
                 capture_output=True,
                 text=True,
                 timeout=5
@@ -252,24 +254,26 @@ class USBPortMonitor:
                     # Extract the ttyUSB* device name from sysfs path
                     # e.g., /sys/devices/.../ttyUSB0
                     sysfs_parts = sysfs_line.split('/')
-                    ttyusb_name = None
+                    tty_name = None
                     for part in sysfs_parts:
-                        if part.startswith('ttyUSB'):
-                            ttyusb_name = part
+                        if part.startswith('ttyUSB') or part.startswith('ttyACM'):
+                            tty_name = part
                             break
-                    
-                    if not ttyusb_name:
+
+                    if not tty_name:
                         continue
+
+                    # Map to /dev/ttyUSB* or /dev/ttyACM*
+                    device_path = f"/dev/{tty_name}"
                     
-                    # Map to /dev/ttyUSB*
-                    device_path = f"/dev/{ttyusb_name}"
-                    
-                    # Extract bus/port from sysfs path: 
-                    # /sys/devices/pci0000:00/.../usb1/1-2/1-2:1.0/ttyUSB0 -> "1-2"
+                    # Extract bus/port from sysfs path using the leaf-most usb port
+                    # Example sysfs: /sys/devices/.../usb3/3-5/3-5.4/ttyUSB0
+                    # We want to pick the leaf component (3-5.4) if present so
+                    # it matches the value extracted when reading PDR sysfs paths.
                     port_id = None
-                    for part in sysfs_parts:
-                        if part.startswith(('1-', '2-', '3-', '4-', '5-')):  # Bus port pattern
-                            port_id = part.split(":", 1)[0]  # Drop :1.0 suffix
+                    for part in reversed(sysfs_parts):
+                        if part and part[0].isdigit() and '-' in part:
+                            port_id = part.split(":", 1)[0]  # Drop :1.0 suffix if present
                             break
                     
                     if port_id:
@@ -668,10 +672,15 @@ async def run_agent(config: ConfigManager, logger):
             logger.debug(f"detect_changes returned: {changes_result}")
             added, removed = changes_result
             
-            # Get server URL from config
+            # Get server URL from config. If server is bound to 0.0.0.0 (all
+            # interfaces) use localhost for local agent HTTP requests so we
+            # connect via loopback instead of the wildcard address.
             server_host = config.get('server', 'host', 'localhost')
             server_port = config.get('server', 'port', '8000')
-            server_url = f"http://{server_host}:{server_port}"
+            connect_host = server_host
+            if server_host == '0.0.0.0' or server_host == '::':
+                connect_host = 'localhost'
+            server_url = f"http://{connect_host}:{server_port}"
             logger.debug(f"Server URL: {server_url}")
             
             # Process added ports with async FRU matching
