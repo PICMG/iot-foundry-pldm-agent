@@ -1,5 +1,5 @@
 import { type FormEvent, useEffect, useState } from 'react'
-import { NavLink, Outlet } from 'react-router-dom'
+import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useClient } from '../state/ClientContext'
 
 function NavShell() {
@@ -14,6 +14,10 @@ function NavShell() {
     event.preventDefault()
     setBaseUrl(draftBaseUrl)
   }
+
+  const location = useLocation()
+  const searchParams = new URLSearchParams(location.search)
+  const explorerPath = searchParams.get('path')
 
   return (
     <div className="app-shell">
@@ -53,11 +57,18 @@ function NavShell() {
                 </NavLink>
                 <NavLink
                   to="/explorer?path=/redfish/v1/JobService"
-                  className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}
+                  className={() => (explorerPath === '/redfish/v1/JobService' ? 'nav-link active' : 'nav-link')}
                 >
                   JobService
                 </NavLink>
-                <NavLink to="/explorer" className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}>
+                <NavLink
+                  to="/explorer"
+                  className={() =>
+                    location.pathname === '/explorer' && explorerPath !== '/redfish/v1/JobService'
+                      ? 'nav-link active'
+                      : 'nav-link'
+                  }
+                >
                   Explorer
                 </NavLink>
               </>
