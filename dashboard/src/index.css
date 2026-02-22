@@ -1,0 +1,54 @@
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Space+Grotesk:wght@400;500;700&display=swap');
+
+:root {
+  --bg-main: #050c18;
+  --bg-layer: #091727;
+  --panel-bg: linear-gradient(145deg, rgba(12, 28, 45, 0.86), rgba(14, 41, 63, 0.76));
+  --line-strong: rgba(127, 219, 255, 0.24);
+  --text-main: #f4f8ff;
+  --text-soft: #9bb3d1;
+  font-family: 'Space Grotesk', 'Segoe UI', sans-serif;
+  color: var(--text-main);
+  background: var(--bg-main);
+  line-height: 1.45;
+  font-weight: 400;
+  text-rendering: optimizeLegibility;
+  font-synthesis: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  color: var(--text-main);
+  background:
+    radial-gradient(1200px 500px at 85% -10%, rgba(0, 173, 181, 0.25), transparent 58%),
+    radial-gradient(900px 450px at 0% -10%, rgba(255, 145, 77, 0.22), transparent 52%),
+    linear-gradient(150deg, var(--bg-main), var(--bg-layer));
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-weight: 600;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+#root {
+  min-height: 100vh;
+}

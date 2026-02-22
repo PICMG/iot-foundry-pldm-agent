@@ -75,9 +75,13 @@ class LogManager:
         fh.setLevel(logging.DEBUG)
         fh.flush()  # Ensure writes are flushed immediately
         
-        # Console handler
-        ch = logging.StreamHandler(sys.stdout)
-        ch.setLevel(logging.INFO)
+        # Console handler: only add when stdout is a TTY. When `start.sh`
+        # redirects stdout to the same logfile we write to with the file
+        # handler, a console handler will duplicate every message.
+        ch = None
+        if sys.stdout.isatty():
+            ch = logging.StreamHandler(sys.stdout)
+            ch.setLevel(logging.INFO)
         
         # Formatter
         formatter = logging.Formatter(
@@ -85,13 +89,15 @@ class LogManager:
             datefmt='%Y-%m-%d %H:%M:%S'
         )
         fh.setFormatter(formatter)
-        ch.setFormatter(formatter)
+        if ch:
+            ch.setFormatter(formatter)
         
         self.logger.addHandler(fh)
-        self.logger.addHandler(ch)
+        if ch:
+            self.logger.addHandler(ch)
         
         # Force flush after each log write
-        for handler in self.logger.handlers:
+        for handler in list(self.logger.handlers):
             handler.addFilter(self._flush_filter(handler))
     
     def _flush_filter(self, handler):

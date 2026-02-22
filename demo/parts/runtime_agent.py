@@ -326,38 +326,15 @@ class USBPortMonitor:
     
     def scan_usb_ports(self) -> Dict[str, str]:
         """Scan for currently connected USB ports and their bus paths."""
-        current_ports = {}
-        
+        # Prefer a stable sysfs/tty-based scan to produce consistent port IDs
+        # across successive polls. lsusb-based parsing produced different
+        # identifier formats on some systems which caused spurious added/
+        # removed events and incorrect resource toggles.
         try:
-            # Use lsusb to get USB bus/port info
-            result = subprocess.run(
-                ["lsusb", "-t"],
-                capture_output=True,
-                text=True,
-                timeout=5
-            )
-            if result.returncode != 0:
-                self.logger.debug("lsusb -t not available, trying alternative method")
-                return self._scan_tty_devices()
-            
-            # Parse lsusb -t output
-            # Format: /: Bus 01.Port 1: Dev 1, Class=root_hub, Driver=xhci_hcd/1p, 5000M
-            for line in result.stdout.split('\n'):
-                if 'Port' in line and 'Dev' in line:
-                    parts = line.split()
-                    for i, part in enumerate(parts):
-                        if part.startswith('/'):
-                            bus_info = part.strip('/:')
-                            if '.' in bus_info:
-                                current_ports[bus_info] = f"usb_{bus_info}"
-            
-            if not current_ports:
-                return self._scan_tty_devices()
-            
-            return current_ports
-        except Exception as e:
-            self.logger.debug(f"lsusb failed: {e}, trying tty devices")
             return self._scan_tty_devices()
+        except Exception as e:
+            self.logger.debug(f"tty scan failed in scan_usb_ports: {e}")
+            return {}
     
     def _scan_tty_devices(self) -> Dict[str, str]:
         """Fallback: scan for ttyUSB devices."""
@@ -598,20 +575,29 @@ def disable_resources(port: str, resource_id: str, resource_path: str, logger, s
         if node_path:
             logger.info(f"[DISABLE] Found AutomationNode at {node_path}")
 
-        targets = [path for path in (chassis_path, node_path) if path]
-        if not targets:
+        # Call disabling anchored at both chassis and AutomationNode (if found).
+        # This patches the chassis resource subtree and the AutomationNode
+        # subtree independently while our collection walkers ensure we don't
+        # traverse unrelated top-level collections.
+        if not chassis_path and not node_path:
             logger.warning(f"[DISABLE] Could not find resource with ID={resource_id} in any collection")
             return
 
-        for target_path in targets:
-            response = requests.get(f"{server_url}{target_path}", timeout=5)
-            if response.status_code != 200:
-                logger.warning(f"[DISABLE] Failed to fetch {target_path}: {response.status_code}")
-                continue
+        if chassis_path:
+            resp = requests.get(f"{server_url}{chassis_path}", timeout=5)
+            if resp.status_code == 200:
+                logger.info(f"[DISABLE] Disabling chassis subtree at {chassis_path}...")
+                _disable_resource_tree(resp.json(), chassis_path, resource_id, logger, server_url)
+            else:
+                logger.warning(f"[DISABLE] Failed to fetch chassis {chassis_path}: {resp.status_code}")
 
-            resource = response.json()
-            logger.info(f"[DISABLE] Disabling resource tree from {target_path}...")
-            _disable_resource_tree(resource, target_path, resource_id, logger, server_url)
+        if node_path:
+            resp = requests.get(f"{server_url}{node_path}", timeout=5)
+            if resp.status_code == 200:
+                logger.info(f"[DISABLE] Disabling AutomationNode subtree at {node_path}...")
+                _disable_resource_tree(resp.json(), node_path, resource_id, logger, server_url)
+            else:
+                logger.warning(f"[DISABLE] Failed to fetch AutomationNode {node_path}: {resp.status_code}")
 
         logger.info(f"[DISABLE] Successfully disabled resources for {resource_id}")
 
@@ -639,20 +625,26 @@ def re_enable_resources(port: str, resource_id: str, resource_path: str, logger,
         if node_path:
             logger.info(f"[ENABLE] Found AutomationNode at {node_path}")
 
-        targets = [path for path in (chassis_path, node_path) if path]
-        if not targets:
+        # Enable both chassis and AutomationNode subtrees when present.
+        if not chassis_path and not node_path:
             logger.warning(f"[ENABLE] Could not find resource with ID={resource_id} in any collection")
             return
 
-        for target_path in targets:
-            response = requests.get(f"{server_url}{target_path}", timeout=5)
-            if response.status_code != 200:
-                logger.warning(f"[ENABLE] Failed to fetch {target_path}: {response.status_code}")
-                continue
+        if chassis_path:
+            resp = requests.get(f"{server_url}{chassis_path}", timeout=5)
+            if resp.status_code == 200:
+                logger.info(f"[ENABLE] Enabling chassis subtree at {chassis_path}...")
+                _enable_resource_tree(resp.json(), chassis_path, resource_id, logger, server_url)
+            else:
+                logger.warning(f"[ENABLE] Failed to fetch chassis {chassis_path}: {resp.status_code}")
 
-            resource = response.json()
-            logger.info(f"[ENABLE] Enabling resource tree from {target_path}...")
-            _enable_resource_tree(resource, target_path, resource_id, logger, server_url)
+        if node_path:
+            resp = requests.get(f"{server_url}{node_path}", timeout=5)
+            if resp.status_code == 200:
+                logger.info(f"[ENABLE] Enabling AutomationNode subtree at {node_path}...")
+                _enable_resource_tree(resp.json(), node_path, resource_id, logger, server_url)
+            else:
+                logger.warning(f"[ENABLE] Failed to fetch AutomationNode {node_path}: {resp.status_code}")
 
         logger.info(f"[ENABLE] Successfully re-enabled resources for {resource_id}")
 
@@ -732,9 +724,11 @@ def _disable_resource_tree(resource: dict, resource_path: str, resource_id: str,
                     member_response = requests.get(f"{server_url}{collection_path}", timeout=5)
                     if member_response.status_code == 200:
                         member_data = member_response.json()
-                        _disable_resource_tree(member_data, collection_path, resource_id, logger, server_url)
+                        # Preserve the original resource_path as the root for
+                        # prefix-matching when recursing into instrumentation
+                        _disable_resource_tree(member_data, resource_path, resource_id, logger, server_url)
                 else:
-                    _disable_collection(collection_path, resource_id, logger, server_url)
+                    _disable_collection(collection_path, resource_id, resource_path, logger, server_url)
             
             # Handle inline collection
             elif isinstance(collection_data, dict) and "Members" in collection_data:
@@ -772,9 +766,11 @@ def _enable_resource_tree(resource: dict, resource_path: str, resource_id: str, 
                     member_response = requests.get(f"{server_url}{collection_path}", timeout=5)
                     if member_response.status_code == 200:
                         member_data = member_response.json()
-                        _enable_resource_tree(member_data, collection_path, resource_id, logger, server_url)
+                        # Preserve the original resource_path as the root for
+                        # prefix-matching when recursing into instrumentation
+                        _enable_resource_tree(member_data, resource_path, resource_id, logger, server_url)
                 else:
-                    _enable_collection(collection_path, resource_id, logger, server_url)
+                    _enable_collection(collection_path, resource_id, resource_path, logger, server_url)
             
             # Handle inline collection
             elif isinstance(collection_data, dict) and "Members" in collection_data:
@@ -783,8 +779,13 @@ def _enable_resource_tree(resource: dict, resource_path: str, resource_id: str, 
                         _enable_resource_tree(member, member["@odata.id"], resource_id, logger, server_url)
 
 
-def _disable_collection(collection_path: str, resource_id: str, logger, server_url: str):
-    """Recursively disable all members of a collection."""
+def _disable_collection(collection_path: str, resource_id: str, root_resource_path: str, logger, server_url: str):
+    """Recursively disable all members of a collection that match the root resource path.
+
+    Only members whose @odata.id equals `root_resource_path` or begins with
+    `root_resource_path/` are acted on. This prevents walking and patching entire
+    top-level collections when we intend to touch a single resource subtree.
+    """
     try:
         response = requests.get(f"{server_url}{collection_path}", timeout=5)
         if response.status_code != 200:
@@ -792,21 +793,37 @@ def _disable_collection(collection_path: str, resource_id: str, logger, server_u
             return
         
         collection = response.json()
+        # Prepare prefix matching for the target resource subtree
+        root = root_resource_path
+        prefix = root if root.endswith('/') else root + '/'
+
         for member in collection.get("Members", []):
-            if isinstance(member, dict) and "@odata.id" in member:
-                member_path = member["@odata.id"]
-                member_response = requests.get(f"{server_url}{member_path}", timeout=5)
-                if member_response.status_code == 200:
-                    member_data = member_response.json()
-                    if "Status" in member_data and isinstance(member_data["Status"], dict) and "State" in member_data["Status"]:
-                        _set_resource_state(member_path, "UnavailableOffline", logger, server_url)
-                        logger.debug(f"  Disabled {member_path}")
+            if not (isinstance(member, dict) and "@odata.id" in member):
+                continue
+            member_path = member["@odata.id"]
+
+            # Only operate on members that are the resource itself or children
+            if not (member_path == root or member_path.startswith(prefix)):
+                logger.debug(f"  Skipping unrelated member {member_path} (not under {root})")
+                continue
+
+            member_response = requests.get(f"{server_url}{member_path}", timeout=5)
+            if member_response.status_code == 200:
+                member_data = member_response.json()
+                if "Status" in member_data and isinstance(member_data["Status"], dict) and "State" in member_data["Status"]:
+                    _set_resource_state(member_path, "UnavailableOffline", logger, server_url)
+                    logger.debug(f"  Disabled {member_path}")
     except Exception as e:
         logger.debug(f"  Error processing collection {collection_path}: {e}")
 
 
-def _enable_collection(collection_path: str, resource_id: str, logger, server_url: str):
-    """Recursively enable all members of a collection."""
+def _enable_collection(collection_path: str, resource_id: str, root_resource_path: str, logger, server_url: str):
+    """Recursively enable all members of a collection that match the root resource path.
+
+    Only members whose @odata.id equals `root_resource_path` or begins with
+    `root_resource_path/` are acted on. This prevents touching unrelated
+    top-level resources when enabling a subtree.
+    """
     try:
         response = requests.get(f"{server_url}{collection_path}", timeout=5)
         if response.status_code != 200:
@@ -814,15 +831,26 @@ def _enable_collection(collection_path: str, resource_id: str, logger, server_ur
             return
         
         collection = response.json()
+
+        root = root_resource_path
+        prefix = root if root.endswith('/') else root + '/'
+
         for member in collection.get("Members", []):
-            if isinstance(member, dict) and "@odata.id" in member:
-                member_path = member["@odata.id"]
-                member_response = requests.get(f"{server_url}{member_path}", timeout=5)
-                if member_response.status_code == 200:
-                    member_data = member_response.json()
-                    if "Status" in member_data and isinstance(member_data["Status"], dict) and "State" in member_data["Status"]:
-                        _set_resource_state(member_path, "Enabled", logger, server_url)
-                        logger.debug(f"  Enabled {member_path}")
+            if not (isinstance(member, dict) and "@odata.id" in member):
+                continue
+            member_path = member["@odata.id"]
+
+            # Only operate on members that are the resource itself or children
+            if not (member_path == root or member_path.startswith(prefix)):
+                logger.debug(f"  Skipping unrelated member {member_path} (not under {root})")
+                continue
+
+            member_response = requests.get(f"{server_url}{member_path}", timeout=5)
+            if member_response.status_code == 200:
+                member_data = member_response.json()
+                if "Status" in member_data and isinstance(member_data["Status"], dict) and "State" in member_data["Status"]:
+                    _set_resource_state(member_path, "Enabled", logger, server_url)
+                    logger.debug(f"  Enabled {member_path}")
     except Exception as e:
         logger.debug(f"  Error processing collection {collection_path}: {e}")
 
@@ -889,10 +917,9 @@ async def run_agent(config: ConfigManager, logger):
     loop_iteration = 0
     while shutdown.is_running():
         loop_iteration += 1
-        logger.info(f"=== LOOP ITERATION {loop_iteration} ===")
         try:
             poll_count += 1
-            logger.debug(f"Poll #{poll_count}: checking USB topology...")
+            
             
             # Detect USB topology changes
             changes_result = monitor.detect_changes(known_endpoints)
@@ -980,9 +1007,7 @@ async def run_agent(config: ConfigManager, logger):
                 if port_state:
                     logger.debug(f"  Port states: {port_state}")
             
-            logger.debug(f"Poll #{poll_count}: sleeping for {poll_interval}s...")
             await asyncio.sleep(poll_interval)
-            logger.debug(f"Poll #{poll_count}: woke up, continuing...")
         
         except Exception as e:
             logger.error(f"Error in poll loop: {e}", exc_info=True)
