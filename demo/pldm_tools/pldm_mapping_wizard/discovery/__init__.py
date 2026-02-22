@@ -1,4 +1,4 @@
-"""Port monitoring for /dev/ttyUSB* and /dev/ttyACM* devices."""
+"""Port monitoring for /dev/ttyUSB* devices."""
 
 import os
 import subprocess
@@ -10,11 +10,11 @@ console = Console()
 
 
 class PortMonitor:
-    """Monitor for new USB/ACM serial device appearances."""
+    """Monitor for new USB serial device appearances."""
 
     def __init__(self):
         """Initialize port monitor."""
-        self.tty_paths = ["/dev/ttyUSB*", "/dev/ttyACM*"]
+        self.tty_paths = ["/dev/ttyUSB*"]
 
     def wait_for_device(self) -> Optional[Dict[str, str]]:
         """
@@ -23,7 +23,7 @@ class PortMonitor:
         Returns:
             Dictionary with 'port' and 'usb_address' keys, or None if user quit.
         """
-        console.print("🔍 Watching for USB/ACM devices...")
+        console.print("🔍 Watching for USB devices...")
         user_input = console.input(
             "Insert PLDM device and press ENTER (or 'q' to quit): "
         )
@@ -34,7 +34,7 @@ class PortMonitor:
         # Detect currently available ports
         port = self._detect_port()
         if not port:
-            console.print("[red]✗ No USB/ACM device detected. Please try again.[/red]\n")
+            console.print("[red]✗ No USB device detected. Please try again.[/red]\n")
             return self.wait_for_device()
 
         usb_address = self._get_usb_address(port)
@@ -56,7 +56,7 @@ class PortMonitor:
         Returns:
             Path to the device (e.g., "/dev/ttyUSB0") or None.
         """
-        for pattern in ["/dev/ttyUSB*", "/dev/ttyACM*"]:
+        for pattern in ["/dev/ttyUSB*"]:
             ports = sorted(Path("/").glob(pattern.lstrip("/")))
             if ports:
                 return str(ports[0])

@@ -19,8 +19,12 @@ from rich.console import Console
 from rich.table import Table
 from rich.progress import Progress, SpinnerColumn, BarColumn, TextColumn, TimeElapsedColumn
 import importlib.util
+from configparser import ConfigParser
+from pathlib import Path
+import concurrent.futures
 from typing import List, Optional
 import base64
+import subprocess
 
 console = Console()
 
@@ -55,8 +59,40 @@ def _has_master_for_tty_index(tty_index: str) -> bool:
     return False
 
 
+def is_device_busy(dev_path: str) -> bool:
+    """Return True if any process currently has the device open.
+
+    Scans /proc/*/fd symlinks for a target matching dev_path.
+    """
+    try:
+        for pid in os.listdir('/proc'):
+            if not pid.isdigit():
+                continue
+            fd_dir = f'/proc/{pid}/fd'
+            if not os.path.isdir(fd_dir):
+                continue
+            try:
+                for fd in os.listdir(fd_dir):
+                    try:
+                        target = os.readlink(os.path.join(fd_dir, fd))
+                        # Compare realpaths to handle /dev/pts vs /dev/tty aliases
+                        try:
+                            if os.path.realpath(target) == os.path.realpath(dev_path):
+                                return True
+                        except Exception:
+                            if target == dev_path:
+                                return True
+                    except Exception:
+                        continue
+            except Exception:
+                continue
+    except Exception:
+        return False
+    return False
+
+
 def discover_devices() -> List[dict]:
-    """Return list of candidate serial devices (ttyUSB* and ttyACM*).
+    """Return list of candidate serial devices (ttyUSB* only).
     
     Note: pts devices can be added manually by entering their path directly.
     """
@@ -64,10 +100,85 @@ def discover_devices() -> List[dict]:
     devs = []
 
     # Add regular USB devices
-    paths = sorted(glob.glob('/dev/ttyUSB*') + glob.glob('/dev/ttyACM*'))
+    paths = sorted(glob.glob('/dev/ttyUSB*'))
     for p in paths:
+        # Skip devices that are currently opened by other processes (busy)
+        if is_device_busy(p):
+            console.print(f"[yellow]Skipping busy device: {p}[/yellow]")
+            continue
         usb = get_usb_address(p)
         devs.append({'path': p, 'usb_addr': usb, 'valid': True})
+
+    # Quick FRU metadata probe to filter non-PLDM devices (configurable)
+    try:
+        # Locate demo config (repo layout: demo/configs/demo.ini)
+        demo_root = Path(__file__).parents[1]
+        config_path = demo_root / 'configs' / 'demo.ini'
+        cfg = ConfigParser()
+        probe_enabled = False
+        probe_timeout = 1
+        if config_path.exists():
+            cfg.read(config_path)
+            probe_enabled = cfg.getboolean('probe', 'enabled', fallback=False)
+            try:
+                probe_timeout = cfg.getint('probe', 'timeout', fallback=1)
+            except Exception:
+                probe_timeout = 1
+
+        if probe_enabled and devs:
+            mod = load_export_module()
+            # Obtain SerialPort implementation
+            SerialPort = None
+            try:
+                from pldm_mapping_wizard.serial_transport import SerialPort as SP
+                SerialPort = SP
+            except Exception:
+                SerialPort = getattr(mod, 'SerialPort', None)
+
+            filtered = []
+            # Run probes in subprocesses to avoid any C-level blocking in pyserial.
+            probe_script = Path(__file__).parent / 'probe_fru.py'
+            filtered = []
+            for d in devs:
+                path = d['path']
+                ok = False
+                try:
+                    # Run probe_fru.py with a strict timeout so it can't hang.
+                    res = subprocess.run([
+                        sys.executable,
+                        str(probe_script),
+                        path
+                    ], capture_output=True, timeout=probe_timeout)
+                    out = res.stdout.decode('utf-8', errors='ignore') if res.stdout else ''
+                    err = res.stderr.decode('utf-8', errors='ignore') if res.stderr else ''
+                    try:
+                        mod.export_debug_log(f"[collect_endpoints][probe] device={path} rc={res.returncode} out={out.strip()} err={err.strip()}")
+                    except Exception:
+                        pass
+                    if res.returncode == 0:
+                        ok = True
+                except subprocess.TimeoutExpired:
+                    try:
+                        mod.export_debug_log(f"[collect_endpoints][probe] device={path} timeout={probe_timeout}s")
+                    except Exception:
+                        pass
+                    ok = False
+                except Exception:
+                    try:
+                        mod.export_debug_log(f"[collect_endpoints][probe] device={path} run_exception")
+                    except Exception:
+                        pass
+                    ok = False
+
+                if ok:
+                    filtered.append(d)
+
+            # If we found any PLDM-capable devices, replace devs with filtered list
+            if filtered:
+                devs = filtered
+    except Exception:
+        # Best-effort: don't fail discovery if probing fails
+        pass
 
     # --- Begin: Automatic PTS endpoint discovery ---
     # --- Begin: Automatic PTS endpoint discovery (no psutil) ---
@@ -224,7 +335,7 @@ def main(output):
     try:
         devs = discover_devices()
         if not devs:
-            console.print('[yellow]No /dev/ttyUSB* or /dev/ttyACM* devices found.[/yellow]')
+            console.print('[yellow]No /dev/ttyUSB* devices found.[/yellow]')
             sel = click.prompt("Enter a custom device path like '/dev/pts/1', or 'none' to cancel", default='none')
         else:
             table = Table(title='Discovered serial endpoints')

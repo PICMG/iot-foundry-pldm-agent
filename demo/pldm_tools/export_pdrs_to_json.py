@@ -1374,11 +1374,14 @@ def decode_pdr(pdr_data):
 def get_fru_record_table_metadata(port):
     """Retrieve FRU Record Table metadata."""
     cmd = PDLMCommandEncoder.encode_get_fru_record_table_metadata(instance_id=0)
-    
+
     frame = MCTPFramer.build_frame(pldm_msg=cmd, dest=0, src=16, msg_type=0x01)
     port.write(frame)
+
+    sys.stderr.write(f"get_fru_record_table_metadata: sent command ({len(frame)} bytes): {frame.hex()}\n")
     response = port.read_until_idle()
-    
+    sys.stderr.write(f"get_fru_record_table_metadata: raw response ({len(response) if response else 0} bytes): {response.hex() if response else 'None'}\n") 
+
     if not response:
         return None, "No response"
     
@@ -1389,6 +1392,12 @@ def get_fru_record_table_metadata(port):
     frame_parsed = MCTPFramer.parse_frame(frames[0])
     if not frame_parsed:
         return None, "Failed to parse frame"
+    # Verify frame integrity (FCS) and that this is a PLDM FRU response
+    if not frame_parsed.get('fcs_ok'):
+        return None, "FCS mismatch"
+    # Ensure message is PLDM and FRU type (type == 0x04)
+    if frame_parsed.get('msg_type') != 1 or frame_parsed.get('type') != 0x04:
+        return None, "Unexpected message type"
     
     pldm_data = frame_parsed.get('extra')
     if not pldm_data or len(pldm_data) < 1:
@@ -1463,6 +1472,13 @@ def get_fru_record_table(port, transfer_context=0, expected_length: int | None =
         if not frame_parsed:
             export_debug_log(f"[get_fru_record_table] Failed to parse first frame, first_frame_hex={frames[0].hex() if frames and isinstance(frames[0], (bytes, bytearray)) else 'NA'}")
             return None, "Failed to parse frame"
+        # Verify FCS and PLDM type before accepting
+        if not frame_parsed.get('fcs_ok'):
+            export_debug_log(f"[get_fru_record_table] FCS mismatch on parsed frame")
+            return None, "FCS mismatch"
+        if frame_parsed.get('msg_type') != 1 or frame_parsed.get('type') != 0x04:
+            export_debug_log(f"[get_fru_record_table] Unexpected message type: msg_type={frame_parsed.get('msg_type')} type={frame_parsed.get('type')}")
+            return None, "Unexpected message type"
         pldm_data = frame_parsed.get('extra')
         if not pldm_data or len(pldm_data) < 1:
             export_debug_log(f"[get_fru_record_table] Invalid PLDM payload: extra_present={bool(pldm_data)} len={(len(pldm_data) if isinstance(pldm_data, (bytes, bytearray)) else 'NA')}")
@@ -1513,8 +1529,9 @@ def get_fru_record_table(port, transfer_context=0, expected_length: int | None =
         # Response flags: treat END/START_AND_END/ACKNOWLEDGE_COMPLETION as completion
         if transfer_flag in (0x05, 0x04, 0x08):
             break
-        elif transfer_flag in (0x01, 0x02):
-            # More data coming - use returned data_transfer_handle for next request
+        elif transfer_flag in (0x00, 0x01, 0x02):
+            # More data coming - treat 0x00 as a valid START/continuation on some DUTs
+            # Use returned data_transfer_handle for next request
             if next_data_transfer_handle == 0:
                 break
             data_transfer_handle = next_data_transfer_handle

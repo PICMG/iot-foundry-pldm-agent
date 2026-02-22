@@ -51,21 +51,119 @@ def add_resource_ids(pdr_file: Path, mockup_dir: Path, logger):
                         except Exception as e:
                             logger.debug(f"Failed to parse {index_file}: {e}")
         
-        # Add resource_id to each endpoint
+        # Build a chassis -> FRU lookup so we can match endpoints by Serial/Model
+        chassis_dir = mockup_dir / 'redfish' / 'v1' / 'Chassis'
+        chassis_fru_map = {}  # maps serial -> resource_id, and model -> list(resource_id)
+        if chassis_dir.exists():
+            for ch in chassis_dir.iterdir():
+                if not ch.is_dir():
+                    continue
+                try:
+                    idx = ch / 'Assembly' / 'index.json'
+                    ch_info = {}
+                    # Primary source: Chassis index (may contain SerialNumber/Model)
+                    main_idx = ch / 'index.json'
+                    if main_idx.exists():
+                        try:
+                            main = json.loads(main_idx.read_text())
+                            if isinstance(main, dict):
+                                if 'SerialNumber' in main:
+                                    ch_info['serial'] = main.get('SerialNumber')
+                                if 'Model' in main:
+                                    ch_info['model'] = main.get('Model')
+                        except Exception:
+                            pass
+                    # Assembly may contain richer FRU fields
+                    if idx.exists():
+                        try:
+                            asm = json.loads(idx.read_text())
+                            if isinstance(asm, dict):
+                                members = asm.get('Assemblies', [])
+                                if isinstance(members, list) and members:
+                                    entry = members[0]
+                                    if 'SerialNumber' in entry:
+                                        ch_info['serial'] = entry.get('SerialNumber')
+                                    if 'Model' in entry:
+                                        ch_info['model'] = entry.get('Model')
+                        except Exception:
+                            pass
+
+                    if ch_info:
+                        rid = ch.name
+                        serial = ch_info.get('serial')
+                        model = ch_info.get('model')
+                        if serial:
+                            chassis_fru_map.setdefault('serial', {})[str(serial)] = rid
+                        if model:
+                            chassis_fru_map.setdefault('model', {}).setdefault(str(model), []).append(rid)
+                except Exception:
+                    continue
+
+        def _extract_fru_fields(endpoint: dict) -> dict:
+            """Extract simple FRU fields (SerialNumber, Model) from endpoint fru_records."""
+            out = {}
+            try:
+                fru_sets = endpoint.get('fru_records') or []
+                for rec in fru_sets:
+                    parsed = rec.get('parsed_records') if isinstance(rec, dict) else None
+                    if not isinstance(parsed, list):
+                        continue
+                    for pr in parsed:
+                        fields = pr.get('fields', [])
+                        for f in fields:
+                            name = f.get('typeName')
+                            val = f.get('value')
+                            if not name or val is None:
+                                continue
+                            if name in ('Serial', 'Serial Number', 'SerialNumber') and 'serial' not in out:
+                                out['serial'] = str(val)
+                            if name == 'Model' and 'model' not in out:
+                                out['model'] = str(val)
+            except Exception:
+                pass
+            return out
+
+        # Add resource_id to each endpoint, preferring FRU-based matching
+        node_ids = sorted(automation_nodes.keys(), key=lambda x: int(x) if x.isdigit() else 999)
         for i, endpoint in enumerate(data['endpoints']):
             device_path = endpoint.get('dev', f'unknown_{i}')
-            
-            # Try to match endpoint to an AutomationNode
-            # Simple heuristic: use sequential ID if available
-            node_ids = sorted(automation_nodes.keys(), key=lambda x: int(x) if x.isdigit() else 999)
-            
+            fru_fields = _extract_fru_fields(endpoint)
+
+            matched = None
+            # First: match by serial number against chassis map
+            serial = fru_fields.get('serial')
+            if serial and 'serial' in chassis_fru_map and serial in chassis_fru_map['serial']:
+                matched = chassis_fru_map['serial'][serial]
+
+            # Next: match by exact model if serial not found
+            if not matched:
+                model = fru_fields.get('model')
+                if model and 'model' in chassis_fru_map and model in chassis_fru_map['model']:
+                    # If multiple chassis share same model, prefer positional mapping by index
+                    candidates = chassis_fru_map['model'][model]
+                    if len(candidates) == 1:
+                        matched = candidates[0]
+                    else:
+                        # try to pick candidate by position if available
+                        if i < len(candidates):
+                            matched = candidates[i]
+
+            # If we found a match, assign it
+            if matched:
+                resource_id = matched
+                endpoint['resource_id'] = resource_id
+                endpoint['resource_path'] = f"/redfish/v1/AutomationNodes/{resource_id}"
+                logger.info(f"Mapped endpoint {device_path} → {resource_id} (matched by FRU)")
+                continue
+
+            # Fallback: Try to match by AutomationNodes index order
             if i < len(node_ids):
                 resource_id = node_ids[i]
                 endpoint['resource_id'] = resource_id
                 endpoint['resource_path'] = automation_nodes[resource_id]['path']
                 logger.info(f"Mapped endpoint {device_path} → {resource_id} ({automation_nodes[resource_id]['type']})")
             else:
-                # Fallback: use device name
+                # Final fallback: use device name
                 device_name = Path(device_path).name
                 endpoint['resource_id'] = f"Device_{device_name}"
                 logger.warning(f"No AutomationNode available for endpoint {device_path}, using: {endpoint['resource_id']}")

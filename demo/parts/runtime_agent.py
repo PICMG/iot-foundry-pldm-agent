@@ -83,6 +83,73 @@ class FRUMatcher:
         except Exception as e:
             self.logger.debug(f"Failed to get FRU from {port}: {e}")
             return None
+
+    async def get_fru_metadata_async(self, port: str) -> bool:
+        """Quick probe: retrieve FRU metadata (GET_FRU_RECORD_TABLE_METADATA).
+
+        Returns True if metadata was retrieved successfully, False otherwise.
+        """
+        if not self.export_mod:
+            self.logger.debug(f"No export module for probe {port}, skipping")
+            return False
+
+        try:
+            loop = asyncio.get_running_loop()
+            ok = await loop.run_in_executor(
+                None,
+                self._probe_fru_sync,
+                port
+            )
+            return bool(ok)
+        except Exception as e:
+            self.logger.debug(f"FRU probe failed for {port}: {e}")
+            return False
+
+    def _probe_fru_sync(self, port: str) -> bool:
+        """Synchronous probe implementation that calls get_fru_record_table_metadata.
+
+        Returns True on success, False on failure.
+        """
+        try:
+            if not self.export_mod or not self.serial_port_cls:
+                self.logger.debug(f"  [PROBE SYNC] Export module or SerialPort not loaded for {port}")
+                return False
+
+            self.logger.debug(f"  [PROBE SYNC] Opening PLDM port {port} for metadata probe...")
+            pldm_port = self.serial_port_cls(port=port, baudrate=115200, timeout=1)
+            if not pldm_port.open():
+                self.logger.debug(f"  [PROBE SYNC] Failed to open port {port} for probe")
+                return False
+
+            try:
+                metadata, ferr = self.export_mod.get_fru_record_table_metadata(pldm_port)
+                print(f"  [PROBE SYNC] Probe result for {port}: metadata={metadata} ferr={ferr}")
+                if ferr or not metadata:
+                    self.logger.debug(f"  [PROBE SYNC] Probe failed on {port}, ferr={ferr}")
+                    return False
+
+                # Require non-empty FRU metadata: num_records > 0 or fru_table_length > 0
+                try:
+                    num_records = int(metadata.get('num_records', 0)) if isinstance(metadata, dict) else 0
+                except Exception:
+                    num_records = 0
+                try:
+                    table_len = int(metadata.get('fru_table_length', 0)) if isinstance(metadata, dict) else 0
+                except Exception:
+                    table_len = 0
+
+                if num_records > 0 or table_len > 0:
+                    self.logger.debug(f"  [PROBE SYNC] Probe OK for {port}: num_records={num_records} table_len={table_len}")
+                    return True
+
+                self.logger.debug(f"  [PROBE SYNC] Probe reported empty FRU for {port}: num_records={num_records} table_len={table_len}")
+                return False
+            finally:
+                pldm_port.close()
+
+        except Exception as e:
+            self.logger.debug(f"  [PROBE SYNC] Exception during probe on {port}: {e}")
+            return False
     
     def _get_fru_data_sync(self, port: str) -> Optional[bytes]:
         """Synchronous FRU data retrieval using export module's built-in functions.
@@ -108,15 +175,50 @@ class FRUMatcher:
                 return None
             
             try:
-                # Call the export module's get_fru_record_table function directly
-                table_data, ferr = self.export_mod.get_fru_record_table(pldm_port, transfer_context=0)
-                
+                # Probe metadata first to learn expected FRU length so we can
+                # trim padding/CRC exactly the same way the configurator/builder does.
+                metadata, ferr_meta = None, None
+                try:
+                    metadata, ferr_meta = self.export_mod.get_fru_record_table_metadata(pldm_port)
+                except Exception:
+                    metadata, ferr_meta = None, 'metadata_error'
+
+                expected_len = None
+                if not ferr_meta and metadata and isinstance(metadata, dict):
+                    try:
+                        expected_len = int(metadata.get('fru_table_length'))
+                    except Exception:
+                        expected_len = None
+
+                # Request FRU table with expected_length hint so export logic can trim
+                table_data, ferr = self.export_mod.get_fru_record_table(pldm_port, transfer_context=0, expected_length=expected_len)
+
                 if ferr or not table_data:
                     self.logger.warning(f"  [FRU SYNC] Failed to get FRU table from {port}, ferr={ferr}")
                     return None
-                
-                self.logger.info(f"  [FRU SYNC] Retrieved {len(table_data)} bytes from {port}")
-                return table_data
+
+                # Use parser to determine how many bytes were actually consumed (strip padding/CRC)
+                try:
+                    if expected_len is not None:
+                        parsed_records, consumed = self.export_mod.parse_fru_record_table(table_data, expected_len)
+                    else:
+                        parsed_records, consumed = self.export_mod.parse_fru_record_table(table_data)
+                except Exception:
+                    parsed_records, consumed = [], 0
+
+                # If parser consumed nothing, try to use expected_len or fall back to full length
+                if not consumed:
+                    try:
+                        if expected_len is not None and len(table_data) >= expected_len:
+                            consumed = expected_len
+                        else:
+                            consumed = len(table_data)
+                    except Exception:
+                        consumed = len(table_data)
+
+                actual_table = table_data[:consumed]
+                self.logger.info(f"  [FRU SYNC] Retrieved {len(actual_table)} bytes from {port}")
+                return actual_table
                 
             finally:
                 pldm_port.close()
@@ -145,6 +247,7 @@ class USBPortMonitor:
         self.endpoint_map = {}
         self.port_to_device = {}  # Maps port ID (e.g., "1-1") to device path (e.g., "/dev/ttyUSB0")
         self.fru_matcher = FRUMatcher(logger)
+        self.probe_failed_ports = set()
     
     def load_pdr_endpoints(self, pdr_file: Path) -> Dict[str, Dict]:
         """Load known endpoints from PDR JSON file, with decoded FRU data and resource_id."""
@@ -159,14 +262,32 @@ class USBPortMonitor:
             # Extract endpoints from PDR data
             if isinstance(data, dict) and "endpoints" in data:
                 for ep in data["endpoints"]:
-                    bus_port = ep.get("bus_port") or ep.get("USBAddress")
-                    if not bus_port:
-                        usb_addr = ep.get("usb_addr", {})
-                        sysfs_path = usb_addr.get("sysfs_path")
-                        bus_port = self._extract_bus_port(sysfs_path)
-                    if bus_port:
-                        # Decode FRU data if present
-                        fru_b64 = ep.get("raw_fru_data") or ep.get("fru_records", [{}])[0].get("raw_fru_data")
+                    try:
+                        bus_port = ep.get("bus_port") or ep.get("USBAddress")
+                        if not bus_port:
+                            usb_addr = ep.get("usb_addr") or {}
+                            sysfs_path = None
+                            if isinstance(usb_addr, dict):
+                                sysfs_path = usb_addr.get("sysfs_path")
+                            bus_port = self._extract_bus_port(sysfs_path)
+
+                        if not bus_port:
+                            # Fall back to device path for endpoints (e.g., /dev/pts/8)
+                            devpath = ep.get('dev') or ep.get('device')
+                            if devpath:
+                                bus_port = devpath
+                            else:
+                                self.logger.debug(f"Skipping endpoint without bus_port or device: {ep}")
+                                continue
+
+                        # Decode FRU data if present. Handle raw field first, then fall back
+                        # to fru_records if it's a non-empty list.
+                        fru_b64 = ep.get("raw_fru_data")
+                        if not fru_b64:
+                            fru_records = ep.get("fru_records") or []
+                            if isinstance(fru_records, list) and len(fru_records) > 0 and isinstance(fru_records[0], dict):
+                                fru_b64 = fru_records[0].get("raw_fru_data")
+
                         fru_bytes = None
                         if fru_b64:
                             try:
@@ -174,13 +295,17 @@ class USBPortMonitor:
                                 self.logger.debug(f"Loaded endpoint: {bus_port} ({len(fru_bytes)} bytes FRU)")
                             except Exception as e:
                                 self.logger.debug(f"Failed to decode FRU for {bus_port}: {e}")
-                        
+
                         endpoints[bus_port] = {
                             "device": ep.get("device"),
                             "resource_id": ep.get("resource_id", f"unknown_{bus_port}"),
                             "resource_path": ep.get("resource_path", f"/redfish/v1/AutomationNodes/{ep.get('resource_id', 'unknown')}"),
                             "fru_data": fru_bytes
                         }
+                    except Exception as e:
+                        # Skip this endpoint but continue processing others
+                        self.logger.debug(f"Skipping endpoint due to error: {e}")
+                        continue
             
             return endpoints
         except Exception as e:
@@ -243,7 +368,7 @@ class USBPortMonitor:
             # Find both ttyUSB* and ttyACM* sysfs entries so ACM devices
             # (CDC ACM) are also detected on unplug/replug events.
             result = subprocess.run(
-                ["find", "/sys/devices", "-name", "ttyUSB*", "-o", "-name", "ttyACM*"],
+                ["find", "/sys/devices", "-name", "ttyUSB*"],
                 capture_output=True,
                 text=True,
                 timeout=5
@@ -256,7 +381,7 @@ class USBPortMonitor:
                     sysfs_parts = sysfs_line.split('/')
                     tty_name = None
                     for part in sysfs_parts:
-                        if part.startswith('ttyUSB') or part.startswith('ttyACM'):
+                        if part.startswith('ttyUSB'):
                             tty_name = part
                             break
 
@@ -280,6 +405,8 @@ class USBPortMonitor:
                         current_ports[port_id] = sysfs_line
                         self.port_to_device[port_id] = device_path
                         self.logger.debug(f"  Mapped {port_id} → {device_path}")
+
+            # NOTE: do not perform a general scan of /dev/pts — avoid interfering with terminals
             
             return current_ports
         except Exception as e:
@@ -305,7 +432,7 @@ class USBPortMonitor:
         
         return added, removed
     
-    async def match_endpoint_by_fru(self, new_port: str, known_endpoints: Dict[str, Dict]) -> Optional[str]:
+    async def match_endpoint_by_fru(self, new_port: str, known_endpoints: Dict[str, Dict], config: Optional[ConfigManager] = None) -> Optional[str]:
         """
         Match a new USB port to a known endpoint by comparing FRU data.
         
@@ -323,30 +450,131 @@ class USBPortMonitor:
         if not device_path:
             self.logger.warning(f"  [FRU] No device path found for port {new_port}")
             return None
+
+        # If a quick probe already failed this scan, skip further attempts
+        if new_port in self.probe_failed_ports:
+            self.logger.info(f"  [PROBE] Skipping {new_port} — previously failed probe this scan")
+            return None
+
+        # Probe settings (configurable)
+        probe_enabled = True
+        probe_timeout = 1
+        try:
+            if config:
+                probe_enabled = config.getbool('probe', 'enabled', True)
+                probe_timeout = config.getint('probe', 'timeout', 1)
+        except Exception:
+            pass
+
+        # Perform quick FRU metadata probe before attempting full FRU read
+        if probe_enabled:
+            self.logger.debug(f"  [PROBE] Probing {device_path} for FRU metadata (timeout={probe_timeout}s)")
+            try:
+                probe_ok = await asyncio.wait_for(self.fru_matcher.get_fru_metadata_async(device_path), timeout=probe_timeout)
+            except asyncio.TimeoutError:
+                probe_ok = False
+            except Exception as e:
+                self.logger.debug(f"  [PROBE] Probe exception for {device_path}: {e}")
+                probe_ok = False
+
+            if not probe_ok:
+                self.logger.info(f"  [PROBE] Quick probe failed for {new_port} ({device_path}); excluding until next scan")
+                self.probe_failed_ports.add(new_port)
+                return None
         
         # Get FRU data from new port
-        new_fru = await self.fru_matcher.get_fru_data_async(device_path)
+        #new_fru = await self.fru_matcher.get_fru_data_async(device_path)
+        # TODO debug reliability issues with async FRU retrieval - for now use sync version to ensure we get data for matching
+        new_fru = self.fru_matcher._get_fru_data_sync(device_path)  # Use sync version for simplicity in this example
         if not new_fru:
             self.logger.warning(f"  [FRU] Could not retrieve FRU from {new_port} ({device_path})")
             return None
         
         self.logger.info(f"  [FRU] Retrieved {len(new_fru)} bytes from {new_port} ({device_path})")
+        try:
+            prefix = new_fru[:128].hex()
+        except Exception:
+            prefix = '<unavailable>'
+        self.logger.info(f"  [FRU] New FRU hex prefix (len={len(new_fru)}): {prefix}")
+        try:
+            full_hex = new_fru.hex()
+        except Exception:
+            full_hex = '<unavailable>'
+        self.logger.info(f"  [FRU] New FRU full hex (len={len(new_fru)}): {full_hex}")
         
-        # Compare against known endpoints
-        for bus_port, ep_data in known_endpoints.items():
-            if ep_data.get("fru_data"):
-                known_fru = ep_data["fru_data"]
-                self.logger.debug(f"  [FRU] Comparing {new_port} ({len(new_fru)} bytes) vs {bus_port} ({len(known_fru)} bytes)...")
-                # Compare byte-for-byte
-                match_result = self.fru_matcher.compare_fru(new_fru, known_fru)
-                if match_result:
-                    self.logger.info(f"  ✓ FRU match! {new_port} matches known endpoint {bus_port}")
-                    return bus_port
-                else:
-                    self.logger.debug(f"    → Mismatch: {bus_port} (comparing {len(new_fru)} vs {len(known_fru)} bytes)")
-            else:
+        # Compare against known endpoints.
+        # For physical USB ports: only compare against known endpoints that have the same
+        # hardware address (bus/port id == new_port).
+        # For pts devices: compare against any known endpoint FRU.
+        try:
+            known_list = []
+            for k, v in known_endpoints.items():
+                has = bool(v.get('fru_data'))
+                known_list.append(f"{k}:fru={has}")
+            self.logger.info(f"  [FRU] Known endpoints: {', '.join(known_list)}")
+        except Exception:
+            pass
+
+        # Decide if this is a pts device; prefer device_path as the indicator when available
+        is_pts = False
+        try:
+            if device_path and device_path.startswith('/dev/pts'):
+                is_pts = True
+        except Exception:
+            is_pts = False
+
+        candidates = []
+        if is_pts:
+            # Any known endpoint with FRU data is a candidate
+            candidates = [(k, v) for k, v in known_endpoints.items() if v.get('fru_data')]
+        else:
+            # Only compare against known endpoint keyed by the same hardware address
+            if new_port in known_endpoints and known_endpoints[new_port].get('fru_data'):
+                candidates = [(new_port, known_endpoints[new_port])]
+
+        if not candidates:
+            self.logger.warning(f"  [FRU] No candidate known endpoints to compare for {new_port} (is_pts={is_pts})")
+            return None
+
+        for bus_port, ep_data in candidates:
+            known_fru = ep_data.get("fru_data")
+            if not known_fru:
                 self.logger.debug(f"  [FRU] Skipping {bus_port}: no FRU data available")
-        
+                continue
+
+            self.logger.debug(f"  [FRU] Comparing {new_port} ({len(new_fru)} bytes) vs {bus_port} ({len(known_fru)} bytes)...")
+            try:
+                kprefix = known_fru[:128].hex()
+            except Exception:
+                kprefix = '<unavailable>'
+            self.logger.info(f"    [FRU] Known FRU hex prefix (len={len(known_fru)}): {kprefix}")
+            try:
+                kfull = known_fru.hex()
+            except Exception:
+                kfull = '<unavailable>'
+            self.logger.info(f"    [FRU] Known FRU full hex (len={len(known_fru)}): {kfull}")
+
+            # Compare byte-for-byte
+            match_result = self.fru_matcher.compare_fru(new_fru, known_fru)
+            if match_result:
+                self.logger.info(f"  ✓ FRU match! {new_port} matches known endpoint {bus_port}")
+
+                # Update in-memory device path for the known endpoint so later operations use it
+                try:
+                    ep_data['device'] = device_path
+                except Exception:
+                    pass
+
+                # Remember which known endpoint is mapped to this detected port
+                try:
+                    self.endpoint_map[new_port] = bus_port
+                except Exception:
+                    pass
+
+                return bus_port
+            else:
+                self.logger.debug(f"    → Mismatch: {bus_port} (comparing {len(new_fru)} vs {len(known_fru)} bytes)")
+
         self.logger.warning(f"  [FRU] No FRU match found for {new_port}")
         return None
 
@@ -685,11 +913,15 @@ async def run_agent(config: ConfigManager, logger):
             
             # Process added ports with async FRU matching
             if added:
-                logger.info(f"Processing {len(added)} added port(s): {added}")
+                # Use a stable list for ordering so we pair ports with match results correctly
+                added_list = list(added)
+                logger.info(f"Processing {len(added_list)} added port(s): {added_list}")
+                # Clear per-scan probe failures (exclusions last only until next scan)
+                monitor.probe_failed_ports.clear()
                 matching_tasks = []
-                for port in added:
+                for port in added_list:
                     logger.info(f"USB port added: {port}")
-                    matching_tasks.append(monitor.match_endpoint_by_fru(port, known_endpoints))
+                    matching_tasks.append(monitor.match_endpoint_by_fru(port, known_endpoints, config))
 
                 # Run all FRU matches concurrently
                 if matching_tasks:
@@ -698,13 +930,18 @@ async def run_agent(config: ConfigManager, logger):
                         matches = await asyncio.gather(*matching_tasks)
                         logger.debug(f"FRU matching completed: {matches}")
 
-                        for port, matched_endpoint in zip(added, matches):
+                        for port, matched_endpoint in zip(added_list, matches):
                             if matched_endpoint:
-                                ep_data = known_endpoints[matched_endpoint]
+                                ep_data = known_endpoints.get(matched_endpoint)
+                                if not ep_data:
+                                    logger.warning(f"Matched endpoint {matched_endpoint} not present in known_endpoints")
+                                    continue
                                 resource_id = ep_data.get('resource_id', 'unknown')
                                 resource_path = ep_data.get('resource_path', '')
                                 logger.info(f"  → Recognized as {matched_endpoint} ({resource_id}), re-enabling resources")
                                 re_enable_resources(matched_endpoint, resource_id, resource_path, logger, server_url)
+                                # Remember which known endpoint is mapped to this detected port
+                                monitor.endpoint_map[port] = matched_endpoint
                                 port_state[matched_endpoint] = "connected"
                             else:
                                 logger.debug(f"  → Unknown device, ignoring")
@@ -714,8 +951,19 @@ async def run_agent(config: ConfigManager, logger):
             if removed:
                 for port in removed:
                     logger.info(f"USB port removed: {port}")
-                    
-                    # Disable resources for known endpoints
+
+                    # Prefer mapping of detected port -> known endpoint (set on add)
+                    mapped = monitor.endpoint_map.pop(port, None)
+                    if mapped and mapped in known_endpoints:
+                        ep_data = known_endpoints[mapped]
+                        resource_id = ep_data.get('resource_id', 'unknown')
+                        resource_path = ep_data.get('resource_path', '')
+                        logger.info(f"  → Detected port {port} mapped to known endpoint {mapped} ({resource_id}), disabling resources")
+                        disable_resources(mapped, resource_id, resource_path, logger, server_url)
+                        port_state[mapped] = "disconnected"
+                        continue
+
+                    # Fallback: if port itself is a known endpoint key, disable that
                     if port in known_endpoints:
                         ep_data = known_endpoints[port]
                         resource_id = ep_data.get('resource_id', 'unknown')
