@@ -123,7 +123,6 @@ class FRUMatcher:
 
             try:
                 metadata, ferr = self.export_mod.get_fru_record_table_metadata(pldm_port)
-                print(f"  [PROBE SYNC] Probe result for {port}: metadata={metadata} ferr={ferr}")
                 if ferr or not metadata:
                     self.logger.debug(f"  [PROBE SYNC] Probe failed on {port}, ferr={ferr}")
                     return False

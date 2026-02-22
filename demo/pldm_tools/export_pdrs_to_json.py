@@ -1378,9 +1378,7 @@ def get_fru_record_table_metadata(port):
     frame = MCTPFramer.build_frame(pldm_msg=cmd, dest=0, src=16, msg_type=0x01)
     port.write(frame)
 
-    sys.stderr.write(f"get_fru_record_table_metadata: sent command ({len(frame)} bytes): {frame.hex()}\n")
     response = port.read_until_idle()
-    sys.stderr.write(f"get_fru_record_table_metadata: raw response ({len(response) if response else 0} bytes): {response.hex() if response else 'None'}\n") 
 
     if not response:
         return None, "No response"
